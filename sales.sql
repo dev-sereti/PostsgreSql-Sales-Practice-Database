@@ -1,26 +1,26 @@
--- ============================================================
+
 -- SALES DATABASE FOR DATA CLEANING PRACTICE
 -- PostgreSQL Script
--- ============================================================
+
 
 -- Step 0: Create the database (run this separately or from psql)
 -- You may need to connect to the default 'postgres' database first.
 -- CREATE DATABASE "Sales";
 -- \c Sales
 
--- ============================================================
+
 -- STEP 1: DROP EXISTING TABLES (for re-runnability)
--- ============================================================
+
 DROP TABLE IF EXISTS order_items CASCADE;
 DROP TABLE IF EXISTS orders CASCADE;
 DROP TABLE IF EXISTS products CASCADE;
 DROP TABLE IF EXISTS customers CASCADE;
 
--- ============================================================
+
 -- STEP 2: CREATE TABLES
 -- Intentionally loose constraints to allow messy data in.
 -- In a clean DB you'd have tighter types/constraints.
--- ============================================================
+
 
 CREATE TABLE customers (
     customer_id     SERIAL PRIMARY KEY,
@@ -73,9 +73,9 @@ CREATE TABLE order_items (
     total_amount    VARCHAR(50)      -- intentionally TEXT — often won't match qty*price
 );
 
--- ============================================================
+
 -- STEP 3: INSERT MESSY CUSTOMER DATA (~200 rows)
--- ============================================================
+
 
 INSERT INTO customers
     (first_name, last_name, email, phone, address, city, state, zip_code, country, registration_date, customer_segment)
@@ -224,9 +224,9 @@ FROM
     generate_series(1,1) AS i   -- multiply if you need more
 LIMIT 175;
 
--- ============================================================
+
 -- STEP 4: INSERT MESSY PRODUCT DATA (~50 rows)
--- ============================================================
+
 
 INSERT INTO products
     (product_name, category, sub_category, brand, unit_price, cost_price, weight_kg, supplier, is_active)
@@ -296,9 +296,9 @@ VALUES
 ('Label Tape Refill',   'Office Supplies','Labels',       'LabelPro',     '12.99',    '4.00',    '0.05',  'Office Depot',      'Yes');
 
 
--- ============================================================
+
 -- STEP 5: INSERT MESSY ORDER DATA (~300 rows)
--- ============================================================
+
 
 -- Insert hand-crafted problematic orders first
 INSERT INTO orders
@@ -425,9 +425,9 @@ SELECT
 FROM generate_series(1, 275);
 
 
--- ============================================================
+
 -- STEP 6: INSERT MESSY ORDER ITEMS DATA (~500+ rows)
--- ============================================================
+
 
 -- Hand-crafted problem rows
 INSERT INTO order_items
@@ -528,10 +528,10 @@ SELECT
     END
 FROM generate_series(1, 480);
 
--- ============================================================
+
 -- STEP 7: VERIFICATION QUERIES
 -- Count rows in each table
--- ============================================================
+
 
 DO $$
 DECLARE
