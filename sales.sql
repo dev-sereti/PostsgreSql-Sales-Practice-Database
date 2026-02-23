@@ -1,12 +1,26 @@
--- \c postgres
+-- ============================================================
+-- SALES DATABASE FOR DATA CLEANING PRACTICE
+-- PostgreSQL Script
+-- ============================================================
 
-DROP DATABASE IF EXISTS sales;
-CREATE DATABASE sales;
+-- Step 0: Create the database (run this separately or from psql)
+-- You may need to connect to the default 'postgres' database first.
+-- CREATE DATABASE "Sales";
+-- \c Sales
 
-\c sales
+-- ============================================================
+-- STEP 1: DROP EXISTING TABLES (for re-runnability)
+-- ============================================================
+DROP TABLE IF EXISTS order_items CASCADE;
+DROP TABLE IF EXISTS orders CASCADE;
+DROP TABLE IF EXISTS products CASCADE;
+DROP TABLE IF EXISTS customers CASCADE;
 
-
--- SECTION 2: TABLE DEFINITIONS
+-- ============================================================
+-- STEP 2: CREATE TABLES
+-- Intentionally loose constraints to allow messy data in.
+-- In a clean DB you'd have tighter types/constraints.
+-- ============================================================
 
 CREATE TABLE customers (
     customer_id     SERIAL PRIMARY KEY,
@@ -14,43 +28,38 @@ CREATE TABLE customers (
     last_name       VARCHAR(100),
     email           VARCHAR(255),
     phone           VARCHAR(50),
-    address         VARCHAR(300),
+    address         VARCHAR(255),
     city            VARCHAR(100),
     state           VARCHAR(100),
     zip_code        VARCHAR(20),
     country         VARCHAR(100),
-    date_of_birth   VARCHAR(50),
-    gender          VARCHAR(30),
-    loyalty_tier    VARCHAR(50),
-    signup_date     VARCHAR(50),
-    annual_income   NUMERIC(15,2)
+    registration_date TEXT,          -- intentionally TEXT to allow bad dates
+    customer_segment  VARCHAR(50)
 );
 
 CREATE TABLE products (
     product_id      SERIAL PRIMARY KEY,
     product_name    VARCHAR(255),
     category        VARCHAR(100),
-    subcategory     VARCHAR(100),
+    sub_category    VARCHAR(100),
     brand           VARCHAR(100),
-    unit_price      NUMERIC(10,2),
-    cost_price      NUMERIC(10,2),
-    stock_quantity  INTEGER,
-    weight_kg       NUMERIC(8,3),
-    sku             VARCHAR(100),
-    supplier        VARCHAR(150),
+    unit_price      VARCHAR(50),     -- intentionally TEXT to allow '$' symbols etc.
+    cost_price      VARCHAR(50),
+    weight_kg       VARCHAR(50),
+    supplier        VARCHAR(100),
     is_active       VARCHAR(20)
 );
 
 CREATE TABLE orders (
     order_id        SERIAL PRIMARY KEY,
     customer_id     INTEGER,
-    order_date      VARCHAR(60),
-    ship_date       VARCHAR(60),
-    status          VARCHAR(50),
-    payment_method  VARCHAR(80),
-    shipping_method VARCHAR(80),
-    discount_pct    NUMERIC(6,3),
-    total_amount    NUMERIC(12,2),
+    order_date      TEXT,            -- intentionally TEXT
+    ship_date       TEXT,            -- intentionally TEXT
+    shipping_method VARCHAR(100),
+    order_status    VARCHAR(50),
+    payment_method  VARCHAR(50),
+    sales_channel   VARCHAR(50),
+    region          VARCHAR(50),
     notes           TEXT
 );
 
@@ -58,982 +67,491 @@ CREATE TABLE order_items (
     item_id         SERIAL PRIMARY KEY,
     order_id        INTEGER,
     product_id      INTEGER,
-    quantity        INTEGER,
-    unit_price      NUMERIC(10,2),
-    discount_amt    NUMERIC(10,2),
-    line_total      NUMERIC(12,2)
+    quantity        VARCHAR(20),     -- intentionally TEXT
+    unit_price      VARCHAR(50),     -- intentionally TEXT
+    discount        VARCHAR(20),     -- intentionally TEXT
+    total_amount    VARCHAR(50)      -- intentionally TEXT — often won't match qty*price
 );
 
-CREATE TABLE sales_reps (
-    rep_id          SERIAL PRIMARY KEY,
-    full_name       VARCHAR(150),
-    email           VARCHAR(255),
-    region          VARCHAR(100),
-    hire_date       VARCHAR(50),
-    commission_pct  NUMERIC(5,2),
-    manager_id      INTEGER,
-    phone           VARCHAR(50),
-    department      VARCHAR(100)
-);
-
-CREATE TABLE returns (
-    return_id       SERIAL PRIMARY KEY,
-    order_id        INTEGER,
-    product_id      INTEGER,
-    return_date     VARCHAR(50),
-    reason          VARCHAR(300),
-    refund_amount   NUMERIC(12,2),
-    condition       VARCHAR(80),
-    processed_by    VARCHAR(100)
-);
-
-CREATE TABLE reviews (
-    review_id       SERIAL PRIMARY KEY,
-    customer_id     INTEGER,
-    product_id      INTEGER,
-    rating          NUMERIC(4,2),
-    review_date     VARCHAR(50),
-    review_text     TEXT,
-    verified        VARCHAR(20)
-);
-
-
--- SECTION 3: SALES REPS (20 rows)
--- Issues: case inconsistency, duplicate reps, missing names,
---         bad phone formats, region abbreviations
-
-
-INSERT INTO sales_reps
-    (full_name, email, region, hire_date, commission_pct, manager_id, phone, department)
-VALUES
-    ('James Holloway',   'james.holloway@company.com',  'Northeast',  '2018-03-15', 5.50, NULL, '555-1001',    'Sales'),
-    ('Maria Chen',       'maria.chen@company.com',      'West',       '2019-07-22', 6.00, 1,    '555-1002',    'Sales'),
-    ('David Okafor',     'david.okafor@company.com',    'Southeast',  '2017-11-01', 5.75, 1,    '555-1003',    'Sales'),
-    ('SARAH MITCHELL',   'sarah.mitchell@company.com',  'Midwest',    '2020-01-10', 5.00, 1,    '555-1004',    'SALES'),
-    ('tom garcia',       'TOM.GARCIA@COMPANY.COM',      'Southwest',  '2020-06-30', 5.25, 2,    '555-1005',    'sales'),
-    ('Priya  Sharma',    'priya.sharma@company.com',    'West',       '2021-02-14', 5.00, 2,    '5551006',     'Sales'),
-    (NULL,               'unknown.rep@company.com',     'Northeast',  '2019-09-01', 4.50, 1,    NULL,          'Sales'),
-    ('Rachel Torres',    NULL,                          'Southeast',  NULL,         5.00, 3,    '555-1008',    'Sales'),
-    ('Kevin Park',       'kevin.park@company.com',      'WEST',       '2021-08-20', 5.50, 2,    '555-1009',    'Sales'),
-    ('Angela Brooks',    'angela.brooks@company.com',   'north east', '2022-01-05', 5.00, 1,    '555-1010',    'Sales'),
-    ('Marcus Webb',      'marcus.webb@company.com',     'NE',         '2022-04-18', 5.00, 1,    '555-1011',    'Sales'),
-    ('James Holloway',   'james.holloway@company.com',  'Northeast',  '2018-03-15', 5.50, NULL, '555-1001',    'Sales'),
-    ('James  Holloway',  'james.holloway@COMPANY.com',  'Northeast',  '2018-03-15', 5.50, NULL, '555-1001',    'Sales'),
-    ('Lisa Nguyen',      'lnguyen@company.com',         'West',       '01/15/2020', 6.25, 2,    '(555) 1014',  'Sales'),
-    ('Robert King',      'robert.king@company.com',     'Midwest',    '2023-07-01', 4.75, 4,    '555.1015',    'Sales Dept'),
-    ('Fatima Hassan',    'fatima.hassan@company.com',   'Southeast',  '2023-09-12', 4.75, 3,    '555-1016',    'Sales'),
-    ('carlos mendez',    'carlos.mendez@company.com',   'Southwest',  '2022-11-30', 5.25, 5,    '555-1017',    'sales'),
-    ('Yuki Tanaka',      'yuki.tanaka@company.com',     'West',       '2021-05-17', 5.75, 2,    '555-1018',    'Sales'),
-    ('Sandra Lee',       'sandra.lee@company.com',      'Midwest',    '2020-08-25', 5.00, 4,    '555-1019',    'Sales'),
-    ('Daniel Wright',    'daniel.wright@company.com',   'Northeast',  '2019-12-03', 5.50, 1,    '555-1020',    'Sales');
-
-
--- SECTION 4: PRODUCTS (50 rows)
--- Issues: duplicate SKUs with case/spacing variations,
---         category inconsistency, negative prices,
---         cost > price, boolean stored as text
-
-
-INSERT INTO products
-    (product_name, category, subcategory, brand, unit_price, cost_price,
-     stock_quantity, weight_kg, sku, supplier, is_active)
-VALUES
-    ('Laptop Pro 15',              'Electronics',   'Computers',   'TechBrand',     1299.99,  750.00,  45,  2.100, 'TB-LP15-001',  'Tech Supplies Inc',   'Yes'),
-    ('LAPTOP PRO 15',              'electronics',   'Computers',   'TechBrand',     1299.99,  750.00,  45,  2.100, 'TB-LP15-001',  'Tech Supplies Inc',   'yes'),
-    ('Laptop Pro 15"',             'Electronics',   'computers',   'Techbrand',     1299.99,  750.00,  45,  2.100, 'TB-LP15-001',  'Tech Supplies Inc',   'Y'),
-    ('Wireless Mouse',             'Electronics',   'Accessories', 'ClickMaster',     29.99,   12.00, 200,  0.150, 'CM-WM-002',    'Global Gadgets',      'Yes'),
-    ('Wireless  Mouse',            'Electronics',   'Accessories', 'Click Master',    29.99,   12.00, 200,  0.150, 'CM-WM-002',    'Global Gadgets',      'yes'),
-    ('USB-C Hub 7-Port',           'Electronics',   'Accessories', 'ConnectAll',      49.99,   22.00, 150,  0.200, 'CA-HUB-003',   'Global Gadgets',      'Yes'),
-    ('4K Monitor 27inch',          'Electronics',   'Displays',    'ViewMax',        399.99,  210.00,  30,  5.500, 'VM-4KM-004',   'Display World',       'Yes'),
-    ('4K Monitor 27"',             'ELECTRONICS',   'Displays',    'ViewMax',        399.99,  210.00,  30,  5.500, 'VM-4KM-004',   'Display World',       '1'),
-    ('Mechanical Keyboard',        'Electronics',   'Accessories', 'KeyPro',         129.99,   60.00,  85,  0.950, 'KP-MK-005',    'Tech Supplies Inc',   'Yes'),
-    ('Bluetooth Speaker',          'Electronics',   'Audio',       'SoundWave',       79.99,   35.00, 120,  0.800, 'SW-BS-006',    'Audio Direct',        'Yes'),
-    ('Bluetooth Speaker',          'electronics',   'audio',       'Sound Wave',      79.99,   35.00, 120,  0.800, 'SW-BS-006',    'Audio Direct',        'YES'),
-    ('Webcam HD 1080p',            'Electronics',   'Accessories', 'ClearVision',     59.99,   25.00, 175,  0.250, 'CV-WC-007',    'Global Gadgets',      'Yes'),
-    ('External SSD 1TB',           'Electronics',   'Storage',     'DataVault',      109.99,   55.00,  90,  0.050, 'DV-SSD-008',   'Tech Supplies Inc',   'Yes'),
-    ('Smart Watch Series X',       'Electronics',   'Wearables',   'TimeTech',       299.99,  145.00,  60,  0.075, 'TT-SW-009',    'Wearable World',      'Yes'),
-    ('Noise Canceling Headphones', 'Electronics',   'Audio',       'SoundWave',      199.99,   90.00,  70,  0.300, 'SW-NCH-010',   'Audio Direct',        'Yes'),
-    ('Mens Slim Fit Jeans',        'Clothing',      'Bottoms',     'UrbanStyle',      59.99,   22.00, 300,  0.600, 'US-MSFJ-011',  'Fashion Forward Co',  'Yes'),
-    ('Men''s Slim Fit Jeans',      'clothing',      'Bottoms',     'Urban Style',     59.99,   22.00, 300,  0.600, 'US-MSFJ-011',  'Fashion Forward Co',  'yes'),
-    ('Womens Running Jacket',      'Clothing',      'Outerwear',   'ActiveWear',      89.99,   38.00, 180,  0.450, 'AW-WRJ-012',   'Sports Depot',        'Yes'),
-    ('Women''s Running Jacket',    'Clothing',      'Outerwear',   'Activewear',      89.99,   38.00, 180,  0.450, 'AW-WRJ-012',   'Sports Depot',        'Yes'),
-    ('Cotton T-Shirt Basic',       'Clothing',      'Tops',        'ComfortWear',     19.99,    7.00, 500,  0.200, 'CW-CTSB-013',  'Fashion Forward Co',  'Yes'),
-    ('Wool Blend Sweater',         'Clothing',      'Tops',        'WarmKnit',        74.99,   32.00, 140,  0.550, 'WK-WBS-014',   'Fashion Forward Co',  'Yes'),
-    ('Athletic Shorts',            'Clothing',      'Bottoms',     'ActiveWear',      34.99,   14.00, 250,  0.250, 'AW-AS-015',    'Sports Depot',        'Yes'),
-    ('Winter Parka',               'Clothing',      'Outerwear',   'NorthStyle',     149.99,   70.00,  90,  1.200, 'NS-WP-016',    'Cold Weather Gear',   'Yes'),
-    ('Coffee Maker Deluxe',        'Home & Kitchen','Appliances',  'BrewMaster',      89.99,   40.00,  80,  3.200, 'BM-CMD-017',   'Home Essentials',     'Yes'),
-    ('Coffee Maker Deluxe',        'Home',          'Appliances',  'Brew Master',     89.99,   40.00,  80,  3.200, 'BM-CMD-017',   'Home Essentials',     'yes'),
-    ('Stand Mixer 5qt',            'Home & Kitchen','Appliances',  'KitchenPro',     249.99,  120.00,  35,  5.900, 'KP-SM5-018',   'Home Essentials',     'Yes'),
-    ('Non-Stick Pan Set',          'Home & Kitchen','Cookware',    'ChefChoice',      69.99,   28.00, 120,  2.100, 'CC-NSPS-019',  'Kitchen World',       'Yes'),
-    ('Bed Sheet Set Queen',        'Home & Kitchen','Bedding',     'ComfortRest',     49.99,   20.00, 200,  1.500, 'CR-BSSQ-020',  'Linen Supply Co',     'Yes'),
-    ('Air Purifier HEPA',          'Home & Kitchen','Appliances',  'CleanAir',       159.99,   75.00,  55,  4.500, 'CA-APH-021',   'Home Essentials',     'Yes'),
-    ('Instant Pot 6qt',            'Home & Kitchen','Appliances',  'PressureCook',   119.99,   55.00,  65,  5.000, 'PC-IP6-022',   'Kitchen World',       'Yes'),
-    ('Yoga Mat Premium',           'Sports',        'Fitness',     'FlexFit',         45.99,   18.00, 220,  1.200, 'FF-YMP-023',   'Sports Depot',        'Yes'),
-    ('Yoga Mat Premium',           'sports',        'Fitness',     'Flex Fit',        45.99,   18.00, 220,  1.200, 'FF-YMP-023',   'Sports Depot',        '1'),
-    ('Dumbbell Set 20lb',          'Sports',        'Weights',     'IronGrip',        79.99,   35.00, 100,  9.100, 'IG-DS20-024',  'Heavy Metal Fitness', 'Yes'),
-    ('Resistance Bands Set',       'Sports',        'Fitness',     'FlexFit',         24.99,   10.00, 300,  0.500, 'FF-RBS-025',   'Sports Depot',        'Yes'),
-    ('Foam Roller',                'Sports',        'Recovery',    'RecoverPro',      29.99,   12.00, 175,  0.700, 'RP-FR-026',    'Sports Depot',        'Yes'),
-    ('Cycling Helmet',             'Sports',        'Cycling',     'SafeRide',        89.99,   42.00,  60,  0.350, 'SR-CH-027',    'Outdoor Adventures',  'Yes'),
-    ('Python for Beginners',       'Books',         'Programming', 'TechPress',       39.99,   12.00, 500,  0.600, 'TP-PFB-028',   'Book Distributors',   'Yes'),
-    ('Office Chair Ergonomic',     'Office',        'Furniture',   'SitRight',       299.99,  140.00,  25, 18.500, 'SR-OCE-029',   'Office World',        'Yes'),
-    ('Desk Lamp LED',              'Office',        'Lighting',    'BrightWork',      39.99,   16.00, 160,  0.900, 'BW-DLL-030',   'Office World',        'Yes'),
-    ('Mystery Product',            NULL,            NULL,          NULL,               -9.99,   -5.00,  -1,  NULL,  NULL,           NULL,                  NULL),
-    ('Overpriced Widget',          'Electronics',   'Accessories', 'NoName',        9999.99, 9999.99,   0,  0.001, 'XX-OW-032',    'Shady Suppliers',     'Yes'),
-    ('Free Sample Item',           'Misc',          'Samples',     'Internal',         0.00,   15.00, 999,  0.010, 'INT-FSI-033',  'Internal',            'No'),
-    ('Discontinued Widget',        'Electronics',   'Old Stock',   'RetroTech',       14.99,    8.00,   0,  0.300, 'RT-DW-034',    'Tech Supplies Inc',   'No'),
-    ('Gaming Chair Pro',           'Office',        'Furniture',   'GameComfort',    399.99,  180.00,  15, 22.000, 'GC-GCP-035',   'Office World',        'Yes'),
-    ('Smart Thermostat',           'Electronics',   'Smart Home',  'HomeSense',      179.99,   80.00,  40,  0.450, 'HS-ST-036',    'Smart Living Co',     'Yes'),
-    ('Water Bottle Insulated',     'Sports',        'Hydration',   'HydroFlow',       34.99,   13.00, 400,  0.350, 'HF-WBI-037',   'Sports Depot',        'Yes'),
-    ('Sunglasses UV400',           'Clothing',      'Accessories', 'StyleShade',      49.99,   18.00, 150,  0.050, 'SS-SUV-038',   'Fashion Forward Co',  'Yes'),
-    ('Backpack 30L',               'Sports',        'Bags',        'TrailBlaze',      79.99,   35.00, 110,  0.900, 'TB-BP30-039',  'Outdoor Adventures',  'Yes'),
-    ('Portable Charger 20000mAh',  'Electronics',   'Accessories', 'PowerBank',       49.99,   22.00, 200,  0.450, 'PB-PC20-040',  'Global Gadgets',      'Yes'),
-    ('Gaming Mouse',               'Electronics',   'Accessories', 'ClickMaster',     59.99,   25.00, 130,  0.180, 'CM-GM-041',    'Global Gadgets',      'Yes');
-
-
--- SECTION 5: CUSTOMERS (200 rows)
--- Issues: duplicate customers, case inconsistency, mixed date
---         formats, invalid emails, impossible values,
---         state abbreviation vs full name, tier misspellings,
---         NULL critical fields, whitespace in names
-
+-- ============================================================
+-- STEP 3: INSERT MESSY CUSTOMER DATA (~200 rows)
+-- ============================================================
 
 INSERT INTO customers
-    (first_name, last_name, email, phone, address, city, state,
-     zip_code, country, date_of_birth, gender, loyalty_tier, signup_date, annual_income)
+    (first_name, last_name, email, phone, address, city, state, zip_code, country, registration_date, customer_segment)
 VALUES
-    -- Block 1: Clean-ish baseline records
-    ('John',        'Smith',      'john.smith@email.com',       '555-234-5678', '123 Main St',        'New York',      'NY',         '10001', 'USA',           '1985-06-15', 'Male',      'Gold',    '2020-01-15', 75000.00),
-    ('Jane',        'Doe',        'jane.doe@email.com',         '555-345-6789', '456 Oak Ave',         'Los Angeles',   'CA',         '90001', 'USA',           '1990-03-22', 'Female',    'Silver',  '2020-03-10', 62000.00),
-    ('Michael',     'Johnson',    'mjohnson@email.com',         '555-456-7890', '789 Pine Rd',         'Chicago',       'IL',         '60601', 'USA',           '1978-11-08', 'Male',      'Bronze',  '2021-05-22', 88000.00),
-    ('Emily',       'Williams',   'emily.w@email.com',          '555-567-8901', '321 Elm St',          'Houston',       'TX',         '77001', 'USA',           '1995-07-30', 'Female',    'Gold',    '2019-11-05', 54000.00),
-    ('Robert',      'Brown',      'robert.brown@email.com',     '555-678-9012', '654 Maple Dr',        'Phoenix',       'AZ',         '85001', 'USA',           '1982-02-14', 'Male',      'Silver',  '2021-02-28', 71000.00),
-    -- Block 2: Name and field case inconsistencies
-    ('ALICE',       'COOPER',     'alice.cooper@email.com',     '555-789-0123', '987 Cedar Ln',        'Philadelphia',  'PA',         '19101', 'USA',           '1988-09-17', 'female',    'gold',    '2020-07-14', 65000.00),
-    ('bob',         'martinez',   'BOB.MARTINEZ@EMAIL.COM',     '5559011234',   '246 Birch Blvd',      'SAN ANTONIO',   'tx',         '78201', 'usa',           '1975-04-05', 'MALE',      'Bronze',  '2022-01-30', 58000.00),
-    ('  Susan  ',   'Taylor  ',   'susan.taylor@email.com',     '555-012-3456', '135 Walnut Way',      'San Diego',     'California', '92101', 'US',            '1992-12-25', 'F',         'Silver',  '2021-08-19', 67000.00),
-    ('David',       'Wilson',     'david.wilson@email.com',     '(555)123-4567','864 Spruce St',       'Dallas',        'TX',         '75201', 'United States', '19830718',   'M',         'Gold',    '2019-06-01', 95000.00),
-    ('Maria',       'Garcia',     'maria.garcia@email.com',     '555.234.5678', '753 Ash Ave',         'San Jose',      'CA',         '95101', 'USA',           '06/22/1997', 'Female',    'Bronze',  '2022-09-11', 49000.00),
-    -- Block 3: Missing critical fields
-    (NULL,          'Thompson',   'unknown@email.com',          '555-345-6789', '159 Willow Rd',       'Austin',        'TX',         '73301', 'USA',           '1989-01-20', 'Male',      'Bronze',  '2023-01-15', NULL),
-    ('Christopher', NULL,         'chris.null@email.com',       '555-456-7890', '357 Oak Ct',          'Jacksonville',  'FL',         '32099', 'USA',           NULL,         'Male',      'Silver',  '2020-04-22', 72000.00),
-    ('Jennifer',    'White',      NULL,                         '555-567-8901', '951 Elm Blvd',        'Columbus',      'OH',         '43085', 'USA',           '1994-08-11', 'Female',    'Gold',    '2018-12-10', 81000.00),
-    ('Matthew',     'Harris',     'matt.harris@email.com',      NULL,           '753 Pine Ave',        'Charlotte',     'NC',         '28201', 'USA',           '1987-05-29', 'Male',      'Silver',  '2021-11-03', 69000.00),
-    ('Ashley',      'Davis',      'ashley.davis@email.com',     '555-678-9012', NULL,                  'Indianapolis',  'IN',         '46201', 'USA',           '1993-10-14', 'Female',    'Bronze',  '2022-06-18', 55000.00),
-    -- Block 4: Exact and near-duplicate customers
-    ('John',        'Smith',      'john.smith@email.com',       '555-234-5678', '123 Main St',         'New York',      'NY',         '10001', 'USA',           '1985-06-15', 'Male',      'Gold',    '2020-01-15', 75000.00),
-    ('John',        'Smith',      'john.smith@email.com',       '555-234-5678', '123 Main Street',     'New York',      'New York',   '10001', 'United States', '1985-06-15', 'Male',      'Gold',    '01/15/2020', 75000.00),
-    ('JOHN',        'SMITH',      'JOHN.SMITH@EMAIL.COM',       '5552345678',   '123 Main St',         'NEW YORK',      'NY',         '10001', 'USA',           '06/15/1985', 'MALE',      'GOLD',    '2020-01-15', 75000.00),
-    ('jane',        'doe',        'jane.doe@email.com',         '555-345-6789', '456 Oak Ave',         'Los Angeles',   'CA',         '90001', 'USA',           '1990-03-22', 'Female',    'Silver',  '2020-03-10', 62000.00),
-    -- Block 5: Invalid data values
-    ('Amanda',      'Clark',      'not-an-email',               '555-789-0123', '246 Maple Dr',        'Nashville',     'TN',         '37201', 'USA',           '1986-03-07', 'Female',    'Silver',  '2020-09-25', 74000.00),
-    ('Brandon',     'Lewis',      'brandon.lewis@email.com',    '000-000-0000', '135 Cedar Ave',       'Memphis',       'TN',         '38101', 'USA',           '2025-01-01', 'Male',      'Bronze',  '2021-03-14', -50000.00),
-    ('Crystal',     'Lee',        'crystal.lee@email.com',      '555-890-1234', '864 Birch Rd',        'Louisville',    'KY',         '40201', 'USA',           '1991-07-23', 'Female',    'Platinum','2019-07-07', 125000.00),
-    ('Derek',       'Walker',     'derek.walker@email.com',     '555-901-2345', '753 Walnut Ct',       'Baltimore',     'MD',         '21201', 'USA',           '1979-12-31', 'M',         'Gold',    '2020-11-20', 88000.00),
-    ('Elena',       'Hall',       'elena.hall@email.com',       '555-012-3456', '951 Spruce Blvd',     'Milwaukee',     'WI',         '53201', 'USA',           '1996-04-18', 'Female',    'Bronze',  '2023-02-28', 47000.00),
-    -- Block 6: State name inconsistencies
-    ('Frank',       'Allen',      'frank.allen@email.com',      '555-123-4567', '159 Ash St',          'Albuquerque',   'New Mexico', '87101', 'USA',           '1984-09-09', 'Male',      'Silver',  '2021-07-16', 63000.00),
-    ('Grace',       'Young',      'grace.young@email.com',      '555-234-5678', '357 Willow Ln',       'Tucson',        'Ariz.',      '85701', 'USA',           '1998-02-28', 'Female',    'Bronze',  '2022-12-01', 42000.00),
-    ('Henry',       'Hernandez',  'henry.h@email.com',          '555-345-6789', '753 Oak Blvd',        'Fresno',        'Calif',      '93701', 'USA',           '1981-07-04', 'Male',      'Gold',    '2019-04-17', 79000.00),
-    ('Isabella',    'King',       'isabella.king@email.com',    '555-456-7890', '246 Pine Way',        'Sacramento',    'ca',         '95801', 'USA',           '1993-11-15', 'Female',    'Silver',  '2021-09-30', 58000.00),
-    ('Jacob',       'Wright',     'jacob.wright@email.com',     '555-567-8901', '135 Elm Dr',          'Long Beach',    'CA',         '90801', 'USA',           '1987-05-21', 'Male',      'Bronze',  '2022-04-05', 53000.00),
-    -- Block 7: International customers
-    ('Katarina',    'Schmidt',    'katarina.schmidt@email.de',  '+49-555-1234', 'Hauptstrasse 15',     'Berlin',        NULL,         '10115', 'Germany',       '1989-08-30', 'Female',    'Bronze',  '2023-01-20', 68000.00),
-    ('Luca',        'Rossi',      'luca.rossi@email.it',        '+39-555-5678', 'Via Roma 42',         'Milan',         NULL,         '20100', 'Italy',         '1985-03-15', 'Male',      'Silver',  '2022-06-14', 72000.00),
-    ('Mei',         'Zhang',      'mei.zhang@email.cn',         '+86-555-9012', '88 Nanjing Road',     'Shanghai',      NULL,         '200000','China',         '1992-10-01', 'Female',    'Gold',    '2021-11-11', 95000.00),
-    ('Arjun',       'Patel',      'arjun.patel@email.in',       '+91-555-3456', '12 MG Road',          'Mumbai',        'Maharashtra','400001','India',         '1990-07-07', 'Male',      'Silver',  '2022-03-22', 55000.00),
-    ('Sophie',      'Dubois',     'sophie.dubois@email.fr',     '+33-555-7890', '15 Rue de la Paix',   'Paris',         NULL,         '75001', 'FRANCE',        '1988-12-24', 'F',         'Bronze',  '2023-03-10', 61000.00),
-    -- Block 8: Regular US customers
-    ('Nathan',      'Scott',      'nathan.scott@email.com',     '555-567-8901', '951 Maple St',        'Atlanta',       'GA',         '30301', 'USA',           '1983-04-12', 'Male',      'Gold',    '2018-08-01', 91000.00),
-    ('Olivia',      'Adams',      'olivia.adams@email.com',     '555-678-9012', '753 Cedar Dr',        'Raleigh',       'NC',         '27601', 'USA',           '1997-09-27', 'Female',    'Silver',  '2021-05-13', 56000.00),
-    ('Patrick',     'Baker',      'patrick.baker@email.com',    '555-789-0123', '246 Birch Ave',       'Miami',         'FL',         '33101', 'USA',           '1975-01-30', 'Male',      'Bronze',  '2022-08-29', 68000.00),
-    ('Quinn',       'Carter',     'quinn.carter@email.com',     '555-890-1234', '135 Walnut Rd',       'Minneapolis',   'MN',         '55401', 'USA',           '1991-06-18', 'Female',    'Silver',  '2020-10-07', 73000.00),
-    ('Ryan',        'Collins',    'ryan.collins@email.com',     '555-901-2345', '864 Spruce Ln',       'Portland',      'OR',         '97201', 'USA',           '1986-11-04', 'Male',      'Gold',    '2019-03-25', 84000.00),
-    ('Stephanie',   'Evans',      'stephanie.e@email.com',      '555-012-3456', '753 Ash Ct',          'Las Vegas',     'NV',         '89101', 'USA',           '1994-08-20', 'Female',    'Bronze',  '2023-04-17', 47000.00),
-    ('Thomas',      'Green',      'thomas.green@email.com',     '555-123-4567', '159 Willow Blvd',     'St. Louis',     'MO',         '63101', 'USA',           '1980-03-08', 'Male',      'Gold',    '2018-11-12', 97000.00),
-    ('Ursula',      'Hill',       'ursula.hill@email.com',      '555-234-5678', '357 Oak Way',         'Denver',        'CO',         '80201', 'USA',           '1999-07-14', 'Female',    'Bronze',  '2022-11-28', 44000.00),
-    ('Victor',      'Jackson',    'victor.jackson@email.com',   '555-345-6789', '951 Pine Blvd',       'Washington',    'DC',         '20001', 'USA',           '1977-02-22', 'Male',      'Silver',  '2021-01-19', 110000.00),
-    ('Wendy',       'Johnson',    'wendy.j@email.com',          '555-456-7890', '246 Elm Dr',          'Boston',        'MA',         '02101', 'USA',           '1995-05-31', 'Female',    'Gold',    '2020-06-23', 78000.00),
-    -- Block 9: More duplicates + corrupted/test records
-    ('Emily',       'Williams',   'emily.w@email.com',          '555-567-8901', '321 Elm St',          'Houston',       'TX',         '77001', 'USA',           '1995-07-30', 'Female',    'Gold',    '2019-11-05', 54000.00),
-    ('emily',       'williams',   'emily.w@email.com',          '555-567-8901', '321 elm st',          'houston',       'texas',      '77001', 'usa',           '07/30/1995', 'female',    'gold',    '11/05/2019', 54000.00),
-    ('Zachary',     'Mitchell',   'zach.mitchell@email.com',    '555-555-5555', '999 Test St',         'Nowhere',       'XX',         '00000', 'USA',           '1900-01-01', 'Male',      'Bronze',  '2099-12-31', 999999.99),
-    ('Xavier',      'Nelson',     'xavier.nelson@email.com',    '555-678-9012', '357 Main Rd',         'Salt Lake City','Utah',       '84101', 'USA',           '1988-09-10', 'Male',      'Silver',  '2020-08-14', 66000.00),
-    ('Yvonne',      'Owens',      'yvonne.owens@email.com',     '555-789-0123', '951 Cedar Ave',       'Cincinnati',    'OH',         '45201', 'USA',           '1993-01-26', 'Female',    'Bronze',  '2021-06-09', 52000.00),
-    -- Block 10
-    ('Aaron',       'Parker',     'aaron.parker@email.com',     '555-890-1234', '753 Birch Ct',        'Orlando',       'FL',         '32801', 'USA',           '1982-10-17', 'Male',      'Gold',    '2019-09-02', 83000.00),
-    ('Bella',       'Quinn',      'bella.quinn@email.com',      '555-901-2345', '246 Walnut Blvd',     'Greensboro',    'NC',         '27401', 'USA',           '1996-04-08', 'Female',    'Silver',  '2021-12-21', 61000.00),
-    ('Carlos',      'Rivera',     'carlos.rivera@email.com',    '555-012-3456', '135 Spruce Rd',       'Bakersfield',   'CA',         '93301', 'USA',           '1984-07-29', 'Male',      'Bronze',  '2022-05-16', 57000.00),
-    ('Diana',       'Stewart',    'diana.stewart@email.com',    '555-123-4567', '864 Ash St',          'Tampa',         'FL',         '33601', 'USA',           '1991-12-03', 'Female',    'Gold',    '2020-02-11', 76000.00),
-    ('Evan',        'Thomas',     'evan.thomas@email.com',      '555-234-5678', '753 Willow Dr',       'Stockton',      'CA',         '95201', 'USA',           '1987-03-19', 'Male',      'Silver',  '2021-04-27', 64000.00),
-    ('Fiona',       'Turner',     'fiona.turner@email.com',     '555-345-6789', '159 Oak Way',         'Corpus Christi','TX',         '78401', 'USA',           '1999-08-05', 'Female',    'Bronze',  '2023-06-30', 41000.00),
-    ('George',      'Underwood',  'george.u@email.com',         '555-456-7890', '357 Pine St',         'Newark',        'NJ',         '07101', 'USA',           '1973-05-24', 'Male',      'Gold',    '2018-01-08', 102000.00),
-    ('Hannah',      'Vance',      'hannah.vance@email.com',     '555-567-8901', '951 Elm Ave',         'Plano',         'TX',         '75023', 'USA',           '1994-11-12', 'Female',    'Silver',  '2021-10-15', 69000.00),
-    ('Ian',         'Wagner',     'ian.wagner@email.com',       '555-678-9012', '246 Maple Blvd',      'Henderson',     'NV',         '89002', 'USA',           '1980-06-30', 'Male',      'Bronze',  '2022-07-23', 72000.00),
-    ('Julia',       'Xavier',     'julia.xavier@email.com',     '555-789-0123', '135 Cedar Rd',        'Lincoln',       'NE',         '68501', 'USA',           '1997-02-17', 'Female',    'Gold',    '2020-04-04', 55000.00),
-    ('Kevin',       'Young',      'kevin.young@email.com',      '555-890-1234', '864 Birch Ln',        'Buffalo',       'NY',         '14201', 'USA',           '1985-09-08', 'Male',      'Silver',  '2021-07-31', 67000.00),
-    ('Laura',       'Zimmerman',  'laura.z@email.com',          '555-901-2345', '753 Walnut St',       'Chandler',      'AZ',         '85224', 'USA',           '1990-04-22', 'Female',    'Bronze',  '2022-10-19', 59000.00),
-    ('Milo',        'Anderson',   'milo.anderson@email.com',    '555-012-3456', '159 Spruce Blvd',     'Madison',       'WI',         '53701', 'USA',           '1978-01-15', 'Male',      'Gold',    '2019-01-28', 88000.00),
-    ('Nina',        'Bell',       'nina.bell@email.com',        '555-123-4567', '357 Ash Ave',         'Lubbock',       'TX',         '79401', 'USA',           '1995-06-26', 'Female',    'Silver',  '2021-03-08', 53000.00),
-    ('Oscar',       'Castro',     'oscar.castro@email.com',     '555-234-5678', '951 Willow Ct',       'Baton Rouge',   'LA',         '70801', 'USA',           '1983-11-20', 'Male',      'Bronze',  '2022-08-05', 61000.00),
-    ('Paula',       'Dean',       'paula.dean@email.com',       '555-345-6789', '246 Oak Dr',          'Spokane',       'WA',         '99201', 'USA',           '1988-08-14', 'Female',    'Gold',    '2020-05-17', 74000.00),
-    ('Quinn',       'Edwards',    'quinn.edwards@email.com',    '555-456-7890', '135 Pine Way',        'Richmond',      'VA',         '23201', 'USA',           '1992-03-31', 'Male',      'Silver',  '2021-09-12', 70000.00),
-    ('Rose',        'Foster',     'rose.foster@email.com',      '555-567-8901', '864 Elm Ct',          'Glendale',      'AZ',         '85301', 'USA',           '1996-10-07', 'Female',    'Bronze',  '2023-02-14', 46000.00),
-    ('Sam',         'Gibson',     'sam.gibson@email.com',       '555-678-9012', '753 Maple Ave',       'Akron',         'OH',         '44301', 'USA',           '1981-07-19', 'Male',      'Gold',    '2019-07-22', 79000.00),
-    ('Tina',        'Howard',     'tina.howard@email.com',      '555-789-0123', '159 Cedar Blvd',      'Riverside',     'CA',         '92501', 'USA',           '1989-02-04', 'Female',    'Silver',  '2021-11-29', 63000.00),
-    -- Block 11: Gender inconsistencies
-    ('Alex',        'Ingram',     'alex.ingram@email.com',      '555-890-1234', '357 Birch Rd',        'Irvine',        'CA',         '92602', 'USA',           '1993-05-13', 'Non-binary','Bronze',  '2022-04-11', 58000.00),
-    ('Beth',        'Jordan',     'beth.jordan@email.com',      '555-901-2345', '951 Walnut Ave',      'Laredo',        'TX',         '78041', 'USA',           '1987-12-27', 'FEMALE',    'Silver',  '2021-08-06', 65000.00),
-    ('Chuck',       'Kennedy',    'chuck.kennedy@email.com',    '555-012-3456', '246 Spruce St',       'Durham',        'NC',         '27701', 'USA',           '1975-09-16', 'male',      'Gold',    '2020-03-19', 92000.00),
-    ('Donna',       'Lopez',      'donna.lopez@email.com',      '555-123-4567', '135 Ash Blvd',        'Madison',       'AL',         '35758', 'USA',           '1991-04-02', 'Woman',     'Bronze',  '2023-05-23', 50000.00),
-    ('Eddie',       'Moore',      'eddie.moore@email.com',      '555-234-5678', '864 Willow Way',      'Aurora',        'CO',         '80010', 'USA',           '1984-08-08', 'Man',       'Silver',  '2021-02-16', 72000.00),
-    -- Block 12: Loyalty tier misspellings
-    ('Fred',        'Nelson',     'fred.nelson@email.com',      '555-345-6789', '753 Oak Rd',          'Lexington',     'KY',         '40501', 'USA',           '1977-03-24', 'Male',      'GOLD',    '2019-10-04', 85000.00),
-    ('Gina',        'Olson',      'gina.olson@email.com',       '555-456-7890', '159 Pine Ct',         'Anchorage',     'AK',         '99501', 'USA',           '1998-11-11', 'Female',    'sliver',  '2022-03-27', 56000.00),
-    ('Hugo',        'Perez',      'hugo.perez@email.com',       '555-567-8901', '357 Elm Ave',         'St. Paul',      'MN',         '55101', 'USA',           '1986-06-05', 'Male',      'Brnze',   '2020-09-15', 69000.00),
-    ('Iris',        'Quinn',      'iris.quinn@email.com',       '555-678-9012', '951 Maple Rd',        'Fort Worth',    'TX',         '76101', 'USA',           '1993-01-17', 'Female',    'Plat',    '2021-06-28', 115000.00),
-    ('Jack',        'Rogers',     'jack.rogers@email.com',      '555-789-0123', '246 Cedar Ct',        'Reno',          'NV',         '89501', 'USA',           '1980-10-29', 'Male',      'VIP',     '2020-12-03', 98000.00),
-    -- Block 13
-    ('Kate',        'Sanders',    'kate.sanders@email.com',     '555-890-1234', '135 Birch Ave',       'Des Moines',    'IA',         '50301', 'USA',           '1995-03-06', 'Female',    'Silver',  '2021-04-14', 62000.00),
-    ('Leo',         'Turner',     'leo.turner@email.com',       '555-901-2345', '864 Walnut Blvd',     'Yonkers',       'NY',         '10701', 'USA',           '1989-07-21', 'Male',      'Bronze',  '2022-07-09', 57000.00),
-    ('Mia',         'Underhill',  'mia.underhill@email.com',    '555-012-3456', '753 Spruce Dr',       'Tacoma',        'WA',         '98401', 'USA',           '1997-12-30', 'Female',    'Gold',    '2020-01-30', 71000.00),
-    ('Noah',        'Vaughn',     'noah.vaughn@email.com',      '555-123-4567', '159 Ash Way',         'Ontario',       'CA',         '91761', 'USA',           '1983-05-16', 'Male',      'Silver',  '2021-10-21', 74000.00),
-    ('Ora',         'Wallace',    'ora.wallace@email.com',      '555-234-5678', '357 Willow Ct',       'Tempe',         'AZ',         '85281', 'USA',           '1990-09-03', 'Female',    'Bronze',  '2022-09-08', 50000.00),
-    ('Paul',        'Xander',     'paul.xander@email.com',      '555-345-6789', '951 Oak Blvd',        'Cape Coral',    'FL',         '33901', 'USA',           '1978-04-11', 'Male',      'Gold',    '2019-05-26', 86000.00),
-    ('Queenie',     'Young',      'queenie.young@email.com',    '555-456-7890', '246 Pine Rd',         'Rockford',      'IL',         '61101', 'USA',           '1994-02-23', 'Female',    'Silver',  '2021-07-03', 60000.00),
-    ('Rupert',      'Zimmerman',  'rupert.z@email.com',         '555-567-8901', '135 Elm Way',         'Peoria',        'IL',         '61602', 'USA',           '1986-08-17', 'Male',      'Bronze',  '2022-12-18', 65000.00),
-    ('Sara',        'Abbott',     'sara.abbott@email.com',      '555-678-9012', '864 Maple Ct',        'Worcester',     'MA',         '01601', 'USA',           '1992-06-09', 'Female',    'Gold',    '2020-06-30', 77000.00),
-    ('Tony',        'Barnes',     'tony.barnes@email.com',      '555-789-0123', '753 Cedar Ave',       'Frisco',        'TX',         '75034', 'USA',           '1985-11-25', 'Male',      'Silver',  '2021-02-02', 81000.00),
-    ('Uma',         'Cooper',     'uma.cooper@email.com',       '555-890-1234', '159 Birch Dr',        'Knoxville',     'TN',         '37901', 'USA',           '1991-04-18', 'Female',    'Bronze',  '2022-05-31', 54000.00),
-    ('Vince',       'Dixon',      'vince.dixon@email.com',      '555-901-2345', '357 Walnut Blvd',     'Shreveport',    'LA',         '71101', 'USA',           '1979-09-07', 'Male',      'Gold',    '2019-08-13', 89000.00),
-    ('Willa',       'Edwards',    'willa.edwards@email.com',    '555-012-3456', '951 Spruce Ct',       'Providence',    'RI',         '02901', 'USA',           '1998-01-30', 'Female',    'Silver',  '2021-09-25', 58000.00),
-    ('Xena',        'Flores',     'xena.flores@email.com',      '555-123-4567', '246 Ash Rd',          'Garden Grove',  'CA',         '92840', 'USA',           '1987-06-14', 'Female',    'Bronze',  '2022-06-16', 55000.00),
-    ('Yuri',        'Garcia',     'yuri.garcia@email.com',      '555-234-5678', '135 Willow Ave',      'Rancho Cucamonga','CA',       '91730', 'USA',           '1984-03-28', 'Male',      'Gold',    '2020-07-21', 80000.00),
-    ('Zara',        'Harris',     'zara.harris@email.com',      '555-345-6789', '864 Oak St',          'Oceanside',     'CA',         '92054', 'USA',           '1996-10-22', 'Female',    'Silver',  '2021-12-07', 62000.00),
-    ('Al',          'Irons',      'al.irons@email.com',         '555-456-7890', '753 Pine Ct',         'Springfield',   'MO',         '65801', 'USA',           '1982-07-06', 'Male',      'Bronze',  '2022-03-29', 59000.00),
-    ('Bea',         'James',      'bea.james@email.com',        '555-567-8901', '159 Elm Blvd',        'Columbia',      'SC',         '29201', 'USA',           '1994-12-19', 'Female',    'Gold',    '2020-08-04', 73000.00),
-    ('Colt',        'Kerr',       'colt.kerr@email.com',        '555-678-9012', '357 Maple Way',       'Alexandria',    'VA',         '22301', 'USA',           '1988-05-03', 'Male',      'Silver',  '2021-05-18', 76000.00),
-    ('Dee',         'Lane',       'dee.lane@email.com',         '555-789-0123', '951 Cedar Rd',        'Corona',        'CA',         '92882', 'USA',           '1993-09-27', 'Female',    'Bronze',  '2022-10-02', 51000.00),
-    -- Block 14
-    ('Erik',        'Mann',       'erik.mann@email.com',        '555-890-1234', '246 Birch St',        'Paterson',      'NJ',         '07501', 'USA',           '1976-02-08', 'Male',      'Gold',    '2019-02-19', 93000.00),
-    ('Faye',        'Nash',       'faye.nash@email.com',        '555-901-2345', '135 Walnut Dr',       'Hayward',       'CA',         '94541', 'USA',           '1999-07-23', 'Female',    'Silver',  '2021-08-11', 50000.00),
-    ('Glen',        'Owen',       'glen.owen@email.com',        '555-012-3456', '864 Spruce Ave',      'Salinas',       'CA',         '93901', 'USA',           '1985-04-16', 'Male',      'Bronze',  '2022-11-26', 56000.00),
-    ('Hana',        'Park',       'hana.park@email.com',        '555-123-4567', '753 Ash Ct',          'Lakewood',      'CO',         '80226', 'USA',           '1991-11-08', 'Female',    'Gold',    '2020-09-09', 78000.00),
-    ('Ivan',        'Quinn',      'ivan.quinn@email.com',       '555-234-5678', '159 Willow Blvd',     'Pomona',        'CA',         '91766', 'USA',           '1980-08-22', 'Male',      'Silver',  '2021-03-31', 68000.00),
-    ('Jana',        'Reed',       'jana.reed@email.com',        '555-345-6789', '357 Oak Ave',         'Escondido',     'CA',         '92025', 'USA',           '1995-05-14', 'Female',    'Bronze',  '2022-06-08', 53000.00),
-    ('Kirk',        'Stone',      'kirk.stone@email.com',       '555-456-7890', '951 Pine Rd',         'Sunnyvale',     'CA',         '94086', 'USA',           '1983-01-29', 'Male',      'Gold',    '2020-11-03', 115000.00),
-    ('Lana',        'Troy',       'lana.troy@email.com',        '555-567-8901', '246 Elm Ct',          'Pomona',        'CA',         '91766', 'USA',           '1988-10-10', 'Female',    'Silver',  '2021-06-22', 67000.00),
-    ('Mark',        'Upton',      'mark.upton@email.com',       '555-678-9012', '135 Maple Blvd',      'Pasadena',      'TX',         '77501', 'USA',           '1977-07-07', 'Male',      'Bronze',  '2022-09-14', 64000.00),
-    ('Nora',        'Vale',       'nora.vale@email.com',        '555-789-0123', '864 Cedar Ln',        'Mesquite',      'TX',         '75150', 'USA',           '1992-03-21', 'Female',    'Gold',    '2020-04-28', 75000.00),
-    ('Omar',        'Wade',       'omar.wade@email.com',        '555-890-1234', '753 Birch Way',       'Killeen',       'TX',         '76541', 'USA',           '1986-09-04', 'Male',      'Silver',  '2021-01-07', 70000.00),
-    ('Pam',         'Yen',        'pam.yen@email.com',          '555-901-2345', '159 Walnut Rd',       'McAllen',       'TX',         '78501', 'USA',           '1990-06-17', 'Female',    'Bronze',  '2022-04-21', 48000.00),
-    ('Quint',       'Zan',        'quint.zan@email.com',        '555-012-3456', '357 Spruce Blvd',     'Beaumont',      'TX',         '77701', 'USA',           '1984-12-01', 'Male',      'Gold',    '2019-06-16', 82000.00),
-    ('Reba',        'Alderman',   'reba.alderman@email.com',    '555-123-4567', '951 Ash Dr',          'Macon',         'GA',         '31201', 'USA',           '1993-07-29', 'Female',    'Silver',  '2021-07-05', 61000.00),
-    ('Seth',        'Bond',       'seth.bond@email.com',        '555-234-5678', '246 Willow St',       'Savannah',      'GA',         '31401', 'USA',           '1981-04-13', 'Male',      'Bronze',  '2022-08-19', 58000.00),
-    ('Tara',        'Cox',        'tara.cox@email.com',         '555-345-6789', '135 Oak Way',         'Augusta',       'GA',         '30901', 'USA',           '1997-11-25', 'Female',    'Gold',    '2020-02-25', 64000.00),
-    ('Umar',        'Dunn',       'umar.dunn@email.com',        '555-456-7890', '864 Pine Ct',         'Columbus',      'GA',         '31901', 'USA',           '1985-08-18', 'Male',      'Silver',  '2021-10-30', 69000.00),
-    ('Vera',        'Ellis',      'vera.ellis@email.com',       '555-567-8901', '753 Elm Ave',         'Athens',        'GA',         '30601', 'USA',           '1989-01-07', 'Female',    'Bronze',  '2022-12-15', 55000.00),
-    ('Wade',        'Ford',       'wade.ford@email.com',        '555-678-9012', '159 Maple Rd',        'Gainesville',   'FL',         '32601', 'USA',           '1976-06-30', 'Male',      'Gold',    '2019-04-08', 88000.00),
-    ('Xia',         'Grant',      'xia.grant@email.com',        '555-789-0123', '357 Cedar Ct',        'Tallahassee',   'FL',         '32301', 'USA',           '1994-03-15', 'Female',    'Silver',  '2021-05-26', 60000.00),
-    -- Block 15: Final batch + internal/test/null records
-    ('Yancy',       'Hyde',       'yancy.hyde@email.com',       '555-890-1234', '951 Birch Blvd',      'Hialeah',       'FL',         '33010', 'USA',           '1987-10-28', 'Male',      'Bronze',  '2022-07-14', 57000.00),
-    ('Zelda',       'Irwin',      'zelda.irwin@email.com',      '555-901-2345', '246 Walnut Ave',      'Fort Lauderdale','FL',        '33301', 'USA',           '1991-08-12', 'Female',    'Gold',    '2020-10-20', 79000.00),
-    ('Art',         'James',      'art.james@email.com',        '555-012-3456', '135 Spruce Rd',       'Hollywood',     'FL',         '33021', 'USA',           '1982-05-24', 'Male',      'Silver',  '2021-04-13', 73000.00),
-    ('Barb',        'Kent',       'barb.kent@email.com',        '555-123-4567', '864 Ash St',          'Pembroke Pines','FL',        '33021', 'USA',           '1995-02-06', 'Female',    'Bronze',  '2022-06-29', 49000.00),
-    ('Cal',         'Luna',       'cal.luna@email.com',         '555-234-5678', '753 Willow Way',      'Seattle',       'WA',         '98101', 'USA',           '1979-11-17', 'Male',      'Gold',    '2019-03-13', 105000.00),
-    ('Deb',         'Moon',       'deb.moon@email.com',         '555-345-6789', '159 Oak Blvd',        'Bellevue',      'WA',         '98004', 'USA',           '1988-07-02', 'Female',    'Silver',  '2021-08-28', 85000.00),
-    ('Eli',         'Norris',     'eli.norris@email.com',       '555-456-7890', '357 Pine Dr',         'Kent',          'WA',         '98031', 'USA',           '1993-04-20', 'Male',      'Bronze',  '2022-10-07', 61000.00),
-    ('Fern',        'Odom',       'fern.odom@email.com',        '555-567-8901', '951 Elm Rd',          'Everett',       'WA',         '98201', 'USA',           '1986-12-15', 'Female',    'Gold',    '2020-07-31', 76000.00),
-    ('Gil',         'Page',       'gil.page@email.com',         '555-678-9012', '246 Maple Ct',        'Renton',        'WA',         '98055', 'USA',           '1981-09-28', 'Male',      'Silver',  '2021-11-16', 78000.00),
-    ('Hera',        'Rice',       'hera.rice@email.com',        '555-789-0123', '135 Cedar Way',       'Kirkland',      'WA',         '98033', 'USA',           '1997-06-11', 'Female',    'Bronze',  '2022-03-04', 56000.00),
-    ('Indy',        'Shaw',       'indy.shaw@email.com',        '555-890-1234', '864 Birch Ave',       'Bellevue',      'WA',         '98006', 'USA',           '1990-02-26', 'Male',      'Gold',    '2020-05-10', 120000.00),
-    ('Jade',        'Todd',       'jade.todd@email.com',        '555-901-2345', '753 Walnut Blvd',     'Spokane Valley','WA',        '99206', 'USA',           '1984-11-09', 'Female',    'Silver',  '2021-06-18', 66000.00),
-    ('Kent',        'Urban',      'kent.urban@email.com',       '555-012-3456', '159 Spruce Ct',       'Federal Way',   'WA',         '98003', 'USA',           '1978-08-22', 'Male',      'Bronze',  '2022-09-25', 63000.00),
-    ('Lori',        'Vega',       'lori.vega@email.com',        '555-123-4567', '357 Ash Dr',          'Bellingham',    'WA',         '98225', 'USA',           '1995-05-05', 'Female',    'Gold',    '2020-03-22', 68000.00),
-    ('Test',        'User',       'test@test.com',              '123-456-7890', 'Test Address',        'Test City',     'TS',         '12345', 'USA',           '2000-01-01', 'Unknown',   'Bronze',  '2023-01-01', 0.00),
-    ('Admin',       'Admin',      'admin@company.com',          '000-000-0000', '1 Company Blvd',      'Company Town',  'NY',         '10001', 'USA',           NULL,         NULL,        NULL,      '2018-01-01', NULL),
-    (NULL,          NULL,         NULL,                         NULL,           NULL,                  NULL,            NULL,         NULL,    NULL,            NULL,         NULL,        NULL,      NULL,         NULL),
-    ('Michael',     'Johnson',    'mjohnson@email.com',         '555-456-7890', '789 Pine Rd',         'Chicago',       'IL',         '60601', 'USA',           '1978-11-08', 'Male',      'Bronze',  '2021-05-22', 88000.00),
-    ('Michael',     'Johnson',    'mjohnson@email.com',         '555-456-7890', '789 Pine Rd',         'Chicago',       'IL',         '60601', 'USA',           '1978-11-08', 'Male',      'Bronze',  '2021-05-22', 88000.00);
+-- Normal records
+('John',     'Smith',      'john.smith@email.com',        '(555) 123-4567',  '123 Main St',           'New York',      'NY',    '10001',   'USA',    '2022-01-15',  'Premium'),
+('Jane',     'Doe',        'jane.doe@email.com',          '555-234-5678',    '456 Oak Ave',            'Los Angeles',   'CA',    '90001',   'USA',    '2022-02-20',  'Regular'),
+('Robert',   'Johnson',    'robert.j@email.com',          '(555)345-6789',   '789 Pine Rd',            'Chicago',       'IL',    '60601',   'USA',    '2022-03-10',  'Premium'),
+('Emily',    'Williams',   'emily.w@email.com',           '555.456.7890',    '321 Elm St',             'Houston',       'TX',    '77001',   'USA',    '2022-04-05',  'Regular'),
+('Michael',  'Brown',      'michael.b@email.com',         '5559876543',      '654 Birch Ln',           'Phoenix',       'AZ',    '85001',   'USA',    '2022-05-18',  'VIP'),
+
+-- Duplicate of John Smith (exact)
+('John',     'Smith',      'john.smith@email.com',        '(555) 123-4567',  '123 Main St',           'New York',      'NY',    '10001',   'USA',    '2022-01-15',  'Premium'),
+
+-- Near-duplicate of John Smith (slight differences)
+('john',     'smith',      'john.smith@email.com',        '555-123-4567',    '123 Main Street',       'new york',      'ny',    '10001',   'US',     '01/15/2022',  'premium'),
+(' John ',   'Smith ',     'JOHN.SMITH@EMAIL.COM',        '(555)123-4567',   '123 Main St.',          'NEW YORK',      'New York', '10001','United States', '2022-01-15', 'PREMIUM'),
+
+-- Missing data in various forms
+('Sarah',    'Davis',      NULL,                          '555-111-2222',    '100 Center Blvd',        'Miami',         'FL',    '33101',   'USA',    '2022-06-01',  'Regular'),
+('David',    '',           'david@email.com',             '',                '200 West Rd',            'Seattle',       'WA',    '98101',   'USA',    '2022-07-12',  NULL),
+('Lisa',     'Anderson',   'N/A',                         'n/a',             '',                       'Boston',        'MA',    '',        'USA',    'None',        'Regular'),
+('',         'Taylor',     'taylor@email.com',            '--',              'N/A',                    NULL,            'OR',    '97201',   NULL,     '2022-08-22',  'n/a'),
+('Kevin',    NULL,         'kevin@email.com',             '555-333-4444',    '400 North Ave',          'Denver',        'CO',    '80201',   'USA',    '',            '--'),
+
+-- Invalid data
+('Amy',      'Wilson',     'amy-at-email.com',            '12345',           '500 South St',           'Atlanta',       'GA',    '30301',   'USA',    '2022-09-15',  'Regular'),
+('Chris',    'Martinez',   'chris@',                      'not a phone',     '600 East Blvd',          'Dallas',        'TX',    'ABCDE',   'USA',    '2099-12-31',  'Gold'),
+('Nancy',    'Thomas',     'nancy@email..com',            '555-000-0000',    '700 Lake Dr',            'San Fran',      'CA',    '94101',   'USA',    '13/25/2022',  'Premum'),
+
+-- Inconsistent city/state naming
+('Mark',     'Jackson',    'mark.j@email.com',            '(555) 444-5555',  '800 River Rd',           'NYC',           'New York','10002', 'US',     '2022-10-05',  'Regular'),
+('Laura',    'White',      'laura.w@email.com',           '555-555-6666',    '900 Hill St',            'L.A.',          'California','90002','United States','2022-10-15','regular'),
+('James',    'Harris',     'james.h@email.com',           '(555)666-7777',   '1000 Valley Ave',        'S.F.',          'Calif.','94102',   'U.S.A.', '2022-11-01',  'REGULAR'),
+('Patricia', 'Clark',      'patricia.c@email.com',        '555 777 8888',    '1100 Mountain Rd',       'Houstan',       'Tx',    '77002',   'usa',    '2022-11-20',  'Prremium'),
+
+-- Typos and misspellings
+('Daniel',   'Lewsi',      'daniel.l@email.com',          '(555)888-9999',   '1200 Forest Ln',         'Chciago',       'ILL',   '60602',   'USA',    '2022-12-01',  'Regulr'),
+('Jennifer', 'Robinsn',    'jennifer.r@email.com',        '555-999-0000',    '1300 Desert Dr',         'Phoneix',       'Ariz',  '85002',   'USA',    '2022-12-15',  'VPI'),
+
+-- Extra whitespace issues
+('  Brian',  'Young  ',    ' brian.y@email.com ',         ' 555-111-0000 ',  '  1400 Beach Blvd  ',    '  Miami  ',     ' FL ',  ' 33102 ', ' USA ',  ' 2023-01-10 ','  Regular  '),
+
+-- Unicode / special character issues
+('José',     'García',     'jose.garcia@email.com',       '555-222-3333',    '1500 Calle Principal',   'San Antonio',   'TX',    '78201',   'USA',    '2023-01-20',  'Premium'),
+('Müller',   'François',   'muller.f@email.com',          '555-333-4444',    '1600 Hauptstraße',       'Portland',      'OR',    '97202',   'USA',    '2023-02-01',  'Regular');
+
+-- Generate more customers procedurally with random messiness
+INSERT INTO customers
+    (first_name, last_name, email, phone, address, city, state, zip_code, country, registration_date, customer_segment)
+SELECT
+    -- First names with random issues
+    CASE (random()*15)::int
+        WHEN 0 THEN '  ' || fn || '  '
+        WHEN 1 THEN UPPER(fn)
+        WHEN 2 THEN LOWER(fn)
+        WHEN 3 THEN ''
+        WHEN 4 THEN NULL
+        ELSE fn
+    END,
+    -- Last names with random issues
+    CASE (random()*12)::int
+        WHEN 0 THEN ln || '  '
+        WHEN 1 THEN UPPER(ln)
+        WHEN 2 THEN NULL
+        ELSE ln
+    END,
+    -- Emails with random issues
+    CASE (random()*10)::int
+        WHEN 0 THEN NULL
+        WHEN 1 THEN 'N/A'
+        WHEN 2 THEN LOWER(fn) || '-at-email.com'
+        WHEN 3 THEN UPPER(LOWER(fn) || '.' || LOWER(ln) || '@email.com')
+        ELSE LOWER(fn) || '.' || LOWER(ln) || i::text || '@email.com'
+    END,
+    -- Phone with random formats
+    CASE (random()*8)::int
+        WHEN 0 THEN '(' || (500 + (random()*99)::int)::text || ') ' || (100 + (random()*899)::int)::text || '-' || (1000 + (random()*8999)::int)::text
+        WHEN 1 THEN (500 + (random()*99)::int)::text || '-' || (100 + (random()*899)::int)::text || '-' || (1000 + (random()*8999)::int)::text
+        WHEN 2 THEN (500 + (random()*99)::int)::text || '.' || (100 + (random()*899)::int)::text || '.' || (1000 + (random()*8999)::int)::text
+        WHEN 3 THEN ''
+        WHEN 4 THEN 'N/A'
+        ELSE (5001000000 + (random()*999999999)::bigint)::text
+    END,
+    -- Address
+    (1 + (random()*9999)::int)::text || ' ' ||
+        (ARRAY['Main','Oak','Pine','Elm','Cedar','Maple','Birch','Walnut','Cherry','Ash'])[1 + (random()*9)::int] || ' ' ||
+        (ARRAY['St','Ave','Rd','Blvd','Ln','Dr','Way','Ct','Pl','Cir'])[1 + (random()*9)::int],
+    -- City with inconsistencies
+    CASE (random()*15)::int
+        WHEN 0 THEN 'new york'
+        WHEN 1 THEN 'NEW YORK'
+        WHEN 2 THEN 'NYC'
+        WHEN 3 THEN 'los angeles'
+        WHEN 4 THEN 'L.A.'
+        WHEN 5 THEN 'Chciago'
+        WHEN 6 THEN 'Houstan'
+        WHEN 7 THEN NULL
+        ELSE (ARRAY['New York','Los Angeles','Chicago','Houston','Phoenix','Philadelphia','San Antonio','San Diego','Dallas','Austin','Seattle','Denver','Boston','Miami','Atlanta','Portland','Minneapolis','Detroit','Tampa','Orlando'])[1 + (random()*19)::int]
+    END,
+    -- State with inconsistencies
+    CASE (random()*8)::int
+        WHEN 0 THEN (ARRAY['New York','California','Illinois','Texas','Arizona'])[1 + (random()*4)::int]
+        WHEN 1 THEN (ARRAY['ny','ca','il','tx','az'])[1 + (random()*4)::int]
+        ELSE (ARRAY['NY','CA','IL','TX','AZ','PA','FL','WA','CO','MA','OR','GA','MN','MI'])[1 + (random()*13)::int]
+    END,
+    -- Zip code with issues
+    CASE (random()*8)::int
+        WHEN 0 THEN ''
+        WHEN 1 THEN 'N/A'
+        ELSE LPAD((10000 + (random()*89999)::int)::text, 5, '0')
+    END,
+    -- Country with inconsistencies
+    CASE (random()*8)::int
+        WHEN 0 THEN 'US'
+        WHEN 1 THEN 'U.S.A.'
+        WHEN 2 THEN 'United States'
+        WHEN 3 THEN 'usa'
+        WHEN 4 THEN NULL
+        ELSE 'USA'
+    END,
+    -- Registration date with format issues
+    CASE (random()*6)::int
+        WHEN 0 THEN TO_CHAR(DATE '2021-01-01' + (random()*1000)::int, 'MM/DD/YYYY')
+        WHEN 1 THEN TO_CHAR(DATE '2021-01-01' + (random()*1000)::int, 'DD-Mon-YYYY')
+        WHEN 2 THEN ''
+        WHEN 3 THEN 'N/A'
+        ELSE TO_CHAR(DATE '2021-01-01' + (random()*1000)::int, 'YYYY-MM-DD')
+    END,
+    -- Customer segment with issues
+    CASE (random()*10)::int
+        WHEN 0 THEN 'premium'
+        WHEN 1 THEN 'REGULAR'
+        WHEN 2 THEN 'Premum'
+        WHEN 3 THEN 'VPI'
+        WHEN 4 THEN NULL
+        WHEN 5 THEN 'N/A'
+        WHEN 6 THEN 'Regulr'
+        ELSE (ARRAY['Premium','Regular','VIP','Enterprise'])[1 + (random()*3)::int]
+    END
+FROM
+    -- Generate names by cross-joining arrays
+    UNNEST(ARRAY['Alex','Sam','Jordan','Taylor','Morgan','Casey','Riley','Quinn','Avery','Cameron',
+                 'Drew','Blake','Skyler','Reese','Dakota','Peyton','Harper','Logan','Charlie','Frankie']) AS fn,
+    UNNEST(ARRAY['Smith','Johnson','Williams','Brown','Jones','Garcia','Miller','Davis','Rodriguez','Martinez']) AS ln,
+    generate_series(1,1) AS i   -- multiply if you need more
+LIMIT 175;
+
+-- ============================================================
+-- STEP 4: INSERT MESSY PRODUCT DATA (~50 rows)
+-- ============================================================
+
+INSERT INTO products
+    (product_name, category, sub_category, brand, unit_price, cost_price, weight_kg, supplier, is_active)
+VALUES
+-- Clean records
+('Laptop Pro 15',       'Electronics',   'Laptops',       'TechBrand',    '999.99',   '650.00',  '2.1',   'Global Supply Co',  'Yes'),
+('Wireless Mouse',      'Electronics',   'Accessories',   'TechBrand',    '29.99',    '12.50',   '0.1',   'Global Supply Co',  'Yes'),
+('USB-C Cable 6ft',     'Electronics',   'Cables',        'CableCo',      '12.99',    '3.00',    '0.05',  'Cable World Inc',   'Yes'),
+('Office Chair Ergo',   'Furniture',     'Chairs',        'ComfortPlus',  '349.99',   '180.00',  '15.0',  'Furniture Direct',  'Yes'),
+('Standing Desk',       'Furniture',     'Desks',         'ComfortPlus',  '599.99',   '320.00',  '35.0',  'Furniture Direct',  'Yes'),
+('Notebook A5',         'Office Supplies','Paper',        'PaperMate',    '4.99',     '1.50',    '0.2',   'Office Depot',      'Yes'),
+('Ballpoint Pen 12pk',  'Office Supplies','Pens',         'PenCraft',     '8.99',     '2.80',    '0.15',  'Office Depot',      'Yes'),
+('Monitor 27"',         'Electronics',   'Monitors',      'ViewTech',     '449.99',   '280.00',  '5.5',   'Display Corp',      'Yes'),
+('Keyboard Mechanical', 'Electronics',   'Accessories',   'KeyMaster',    '79.99',    '35.00',   '0.8',   'Global Supply Co',  'Yes'),
+('Webcam HD 1080p',     'Electronics',   'Accessories',   'ViewTech',     '59.99',    '22.00',   '0.15',  'Display Corp',      'Yes'),
+
+-- Price with currency symbols (dirty)
+('Printer Laser',       'Electronics',   'Printers',      'PrintPro',     '$299.99',  '$150.00', '8.0',   'Print Solutions',   'Yes'),
+('Ink Cartridge Black', 'Office Supplies','Ink',           'PrintPro',     '$24.99',   '$8.00',   '0.1',   'Print Solutions',   'Yes'),
+('Ink Cartridge Color', 'Office Supplies','ink',           'PrintPro',     '34.99$',   '12.00',   '0.1',   'Print Solutions',   'yes'),
+
+-- Category inconsistencies
+('Desk Lamp LED',       'Furniture',     'Lighting',      'LightCo',      '39.99',    '15.00',   '1.2',   'Light World',       'Yes'),
+('Desk Lamp LED',       'furniture',     'Lighting',      'LightCo',      '39.99',    '15.00',   '1.2',   'Light World',       'Y'),
+('Filing Cabinet',      'FURNITURE',     'Storage',       'SteelCase',    '189.99',   '95.00',   '25.0',  'Furniture Direct',  'YES'),
+('Whiteboard 4x3',      'Offce Supplies','Boards',        'BoardMax',     '89.99',    '40.00',   '3.0',   'Office Depot',      'Yes'),
+('Sticky Notes 12pk',   'Office Suplies','Paper',         'PaperMate',    '6.99',     '2.00',    '0.3',   'Office Depot',      'Yes'),
+('Stapler Heavy Duty',  'Office supplies','Staplers',      'BindAll',      '19.99',    '8.00',    '0.5',   'Office Depot',      'Yes'),
+
+-- Missing/invalid data
+('Headphones Wireless', 'Electronics',   'Audio',         'SoundMax',     '149.99',   NULL,      '0.25',  'Audio World',       'Yes'),
+('Tablet 10"',          'Electronics',   'Tablets',       '',             '399.99',   '220.00',  'N/A',   '',                  NULL),
+('Phone Case',          'Electronics',   'Accessories',   'CaseCo',       '',         '3.00',    '0.05',  'Case World',        'Yes'),
+('Mouse Pad XL',        'Electronics',   'Accessories',   NULL,           '14.99',    '4.00',    '0.3',   NULL,                'Y'),
+
+-- Negative/zero prices (errors)
+('HDMI Cable 3ft',      'Electronics',   'Cables',        'CableCo',      '-9.99',    '2.50',    '0.03',  'Cable World Inc',   'Yes'),
+('Paper Ream 500',      'Office Supplies','Paper',        'PaperMate',    '0',        '3.50',    '2.5',   'Office Depot',      'Yes'),
+
+-- Extreme outlier
+('Gold Plated Pen',     'Office Supplies','Pens',         'LuxWrite',     '9999.99',  '5000.00', '0.05',  'Luxury Goods Ltd',  'Yes'),
+
+-- Duplicate product different casing
+('laptop pro 15',       'electronics',   'laptops',       'techbrand',    '999.99',   '650.00',  '2.1',   'global supply co',  'yes'),
+('LAPTOP PRO 15',       'ELECTRONICS',   'LAPTOPS',       'TECHBRAND',    '999.99',   '650.00',  '2.1',   'GLOBAL SUPPLY CO',  'YES'),
+
+-- More products for variety
+('Bookshelf 5-Tier',    'Furniture',     'Shelving',      'WoodCraft',    '129.99',   '65.00',   '18.0',  'Furniture Direct',  'Yes'),
+('Desk Organizer',      'Office Supplies','Organization', 'OrgPro',       '24.99',    '10.00',   '0.8',   'Office Depot',      'Yes'),
+('Power Strip 6-Outlet','Electronics',   'Power',         'PowerSafe',    '19.99',    '7.00',    '0.4',   'Global Supply Co',  'Yes'),
+('Surge Protector',     'Electronics',   'Power',         'PowerSafe',    '34.99',    '14.00',   '0.6',   'Global Supply Co',  'Yes'),
+('Ethernet Cable 10ft', 'Electronics',   'Cables',        'CableCo',      '8.99',     '2.00',    '0.1',   'Cable World Inc',   'Yes'),
+('Webcam Cover',        'Electronics',   'Accessories',   'PrivShield',   '3.99',     '0.50',    '0.01',  'Privacy Products',  'Yes'),
+('Document Shredder',   'Electronics',   'Office Machines','ShreddIt',    '149.99',   '75.00',   '8.0',   'Office Depot',      'Yes'),
+('Calculator Scientific','Office Supplies','Calculators',  'MathPro',     '19.99',    '8.00',    '0.2',   'Office Depot',      'Yes'),
+('Binder 3-Ring 1"',    'Office Supplies','Binders',      'BindAll',      '5.99',     '2.00',    '0.3',   'Office Depot',      'Yes'),
+('Tape Dispenser',      'Office Supplies','Tape',         'StickyStuff',  '7.99',     '3.00',    '0.25',  'Office Depot',      'Yes'),
+('Scissors 8"',         'Office Supplies','Cutting',      'SharpEdge',    '6.99',     '2.50',    '0.15',  'Office Depot',      'Yes'),
+('Paper Clips 100ct',   'Office Supplies','Fasteners',    'BindAll',      '2.99',     '0.80',    '0.1',   'Office Depot',      'Yes'),
+('Rubber Bands Asst',   'Office Supplies','Fasteners',    'BindAll',      '3.49',     '1.00',    '0.1',   'Office Depot',      'Yes'),
+('Marker Set 12pk',     'Office Supplies','Writing',      'ColorWrite',   '11.99',    '4.50',    '0.2',   'Office Depot',      'Yes'),
+('Highlighter 6pk',     'Office Supplies','Writing',      'ColorWrite',   '5.49',     '1.80',    '0.1',   'Office Depot',      'Yes'),
+('Correction Tape 6pk', 'Office Supplies','Writing',      'FixIt',        '8.99',     '3.00',    '0.15',  'Office Depot',      'Yes'),
+('Envelope #10 100ct',  'Office Supplies','Mailing',      'MailMax',      '9.99',     '3.50',    '0.5',   'Office Depot',      'Yes'),
+('Bubble Mailer 25ct',  'Office Supplies','Mailing',      'MailMax',      '14.99',    '6.00',    '0.8',   'Office Depot',      'Yes'),
+('Label Maker',         'Electronics',   'Office Machines','LabelPro',    '39.99',    '18.00',   '0.5',   'Office Depot',      'Yes'),
+('Label Tape Refill',   'Office Supplies','Labels',       'LabelPro',     '12.99',    '4.00',    '0.05',  'Office Depot',      'Yes');
 
 
--- SECTION 6: ORDERS (180 rows)
--- Issues: mixed date formats, status/payment/shipping typos,
---         ship before order date, discount > 100%,
---         negative totals, orphaned customer_ids,
---         duplicate orders
+-- ============================================================
+-- STEP 5: INSERT MESSY ORDER DATA (~300 rows)
+-- ============================================================
 
-
+-- Insert hand-crafted problematic orders first
 INSERT INTO orders
-    (customer_id, order_date, ship_date, status, payment_method,
-     shipping_method, discount_pct, total_amount, notes)
+    (customer_id, order_date, ship_date, shipping_method, order_status, payment_method, sales_channel, region, notes)
 VALUES
-    -- Batch 1: Clean baseline
-    (1,  '2023-01-05', '2023-01-07', 'Completed', 'Credit Card',  'Standard', 0.000,  129.99, NULL),
-    (2,  '2023-01-06', '2023-01-09', 'Completed', 'PayPal',       'Express',  5.000,   74.99, 'Gift wrap requested'),
-    (3,  '2023-01-08', '2023-01-10', 'Completed', 'Credit Card',  'Standard', 0.000,  299.99, NULL),
-    (4,  '2023-01-10', '2023-01-12', 'Completed', 'Debit Card',   'Standard', 10.000, 179.99, NULL),
-    (5,  '2023-01-11', '2023-01-14', 'Completed', 'Credit Card',  'Express',  0.000,   49.99, NULL),
-    -- Batch 2: Status field inconsistencies
-    (6,  '2023-01-12', '2023-01-15', 'completed',  'credit card', 'standard', 0.000,   89.99, NULL),
-    (7,  '2023-01-13', '2023-01-16', 'COMPLETED',  'PAYPAL',      'EXPRESS',  5.000,  159.99, NULL),
-    (8,  '2023-01-14', '2023-01-17', 'Complete',   'Credit Card', 'Standard', 0.000,  399.99, NULL),
-    (9,  '2023-01-15', '2023-01-18', 'Comp',       'Debit Card',  'Ground',   0.000,  249.99, NULL),
-    (10, '2023-01-16', '2023-01-19', 'Shipped',    'Credit Card', 'Standard', 0.000,   29.99, NULL),
-    (11, '2023-01-17', '2023-01-19', 'shipped',    'PayPal',      'Express',  15.000, 599.99, NULL),
-    (12, '2023-01-18', '2023-01-20', 'In Transit', 'Credit Card', 'Standard', 0.000,  109.99, NULL),
-    (13, '2023-01-19', NULL,         'Pending',    'Credit Card', 'Standard', 0.000,   79.99, 'Rush order'),
-    (14, '2023-01-20', NULL,         'PENDING',    'Bank Transfer','Standard', 0.000,  44.99, NULL),
-    (15, '2023-01-21', NULL,         'pending',    'Credit Card', 'Express',  5.000,  199.99, NULL),
-    -- Batch 3: Date format inconsistencies
-    (16, '01/22/2023',       '01/25/2023',  'Completed', 'Credit Card', 'Standard', 0.000,   59.99, NULL),
-    (17, '01-23-2023',       '01-26-2023',  'Completed', 'PayPal',      'Ground',   0.000,  149.99, NULL),
-    (18, 'January 24, 2023', NULL,          'Cancelled', 'Credit Card', 'Standard', 0.000,    0.00, 'Customer cancelled'),
-    (19, '2023/01/25',       '2023/01/28',  'Completed', 'Debit Card',  'Express',  10.000,  89.99, NULL),
-    (20, '25-01-2023',       '28-01-2023',  'Completed', 'Credit Card', 'Standard', 0.000,  329.99, NULL),
-    -- Batch 4: Payment method inconsistencies
-    (21, '2023-02-01', '2023-02-04', 'Completed', 'Visa',             'Standard', 0.000,  129.99, NULL),
-    (22, '2023-02-02', '2023-02-05', 'Completed', 'MC',               'Standard', 0.000,   49.99, NULL),
-    (23, '2023-02-03', '2023-02-06', 'Completed', 'Mastercard',       'Express',  0.000,  199.99, NULL),
-    (24, '2023-02-04', '2023-02-07', 'Completed', 'AMEX',             'Ground',   5.000,  299.99, NULL),
-    (25, '2023-02-05', '2023-02-08', 'Completed', 'AmericanExp',      'Standard', 0.000,   79.99, NULL),
-    (26, '2023-02-06', '2023-02-09', 'Completed', 'American Express', 'Standard', 0.000,  159.99, NULL),
-    (27, '2023-02-07', '2023-02-10', 'Completed', 'pay pal',          'Express',  0.000,   89.99, NULL),
-    (28, '2023-02-08', '2023-02-11', 'Completed', 'Paypal',           'Standard', 10.000, 249.99, NULL),
-    (29, '2023-02-09', '2023-02-12', 'Completed', 'cash',             'Standard', 0.000,   34.99, NULL),
-    (30, '2023-02-10', '2023-02-13', 'Completed', 'Cash',             'Ground',   0.000,   24.99, NULL),
-    -- Batch 5: Shipping method inconsistencies
-    (31, '2023-02-11', '2023-02-14', 'Completed', 'Credit Card', 'Std',      0.000,  109.99, NULL),
-    (32, '2023-02-12', '2023-02-15', 'Completed', 'Credit Card', 'Overnight',0.000,  399.99, NULL),
-    (33, '2023-02-13', '2023-02-16', 'Completed', 'Credit Card', '2-Day',    0.000,   59.99, NULL),
-    (34, '2023-02-14', '2023-02-17', 'Completed', 'PayPal',      'Two Day',  5.000,  179.99, NULL),
-    (35, '2023-02-15', '2023-02-18', 'Completed', 'Credit Card', 'Same Day', 0.000,  299.99, NULL),
-    -- Batch 6: Business rule violations
-    (36, '2023-02-16', '2023-02-10', 'Completed', 'Credit Card', 'Standard', 0.000,   129.99, NULL),
-    (37, '2023-02-17', '2023-02-20', 'Completed', 'Credit Card', 'Standard', 110.000,  59.99, NULL),
-    (38, '2023-02-18', '2023-02-21', 'Completed', 'Credit Card', 'Standard', -5.000,   89.99, NULL),
-    (39, '2023-02-19', '2023-02-22', 'Completed', 'Credit Card', 'Standard', 0.000,    -9.99, NULL),
-    (40, '2023-02-20', '2023-02-23', 'Completed', 'Credit Card', 'Standard', 0.000,     0.00, 'Zero amount order'),
-    -- Batch 7: Orphaned orders (no matching customer)
-    (9999, '2023-03-01', '2023-03-04', 'Completed', 'Credit Card', 'Standard', 0.000, 199.99, 'Orphaned order 1'),
-    (8888, '2023-03-02', '2023-03-05', 'Completed', 'PayPal',      'Express',  5.000,  99.99, 'Orphaned order 2'),
-    (NULL, '2023-03-03', '2023-03-06', 'Completed', 'Credit Card', 'Standard', 0.000, 149.99, 'No customer ID'),
-    -- Batch 8: March 2023
-    (41, '2023-03-04', '2023-03-07', 'Completed', 'Credit Card', 'Standard', 0.000,   69.99, NULL),
-    (42, '2023-03-05', '2023-03-08', 'Completed', 'PayPal',      'Ground',   10.000, 189.99, NULL),
-    (43, '2023-03-06', '2023-03-09', 'Completed', 'Debit Card',  'Standard', 0.000,  299.99, NULL),
-    (44, '2023-03-07', '2023-03-10', 'Returned',  'Credit Card', 'Standard', 0.000,  129.99, 'Customer requested return'),
-    (45, '2023-03-08', '2023-03-11', 'Returned',  'PayPal',      'Express',  0.000,  249.99, NULL),
-    (46, '2023-03-09', '2023-03-12', 'returned',  'Credit Card', 'Standard', 5.000,   79.99, NULL),
-    (47, '2023-03-10', '2023-03-13', 'Refunded',  'Credit Card', 'Standard', 0.000,  399.99, NULL),
-    (48, '2023-03-11', '2023-03-14', 'refunded',  'Debit Card',  'Standard', 0.000,  159.99, NULL),
-    (49, '2023-03-12', '2023-03-15', 'Completed', 'Credit Card', 'Standard', 15.000, 229.99, NULL),
-    (50, '2023-03-13', '2023-03-16', 'Completed', 'PayPal',      'Express',  0.000,   89.99, NULL),
-    -- Batch 9: Exact duplicate orders
-    (1,  '2023-01-05', '2023-01-07', 'Completed', 'Credit Card', 'Standard', 0.000,  129.99, NULL),
-    (1,  '2023-01-05', '2023-01-07', 'Completed', 'Credit Card', 'Standard', 0.000,  129.99, NULL),
-    (2,  '2023-01-06', '2023-01-09', 'Completed', 'PayPal',      'Express',  5.000,   74.99, 'Gift wrap requested'),
-    -- Batch 10: April 2023
-    (51, '2023-04-01', '2023-04-04', 'Completed', 'Credit Card', 'Standard', 0.000,  109.99, NULL),
-    (52, '2023-04-02', '2023-04-05', 'Completed', 'PayPal',      'Ground',   0.000,  349.99, NULL),
-    (53, '2023-04-03', '2023-04-06', 'Shipped',   'Debit Card',  'Express',  5.000,  199.99, NULL),
-    (54, '2023-04-04', '2023-04-07', 'Completed', 'Credit Card', 'Standard', 10.000,  79.99, NULL),
-    (55, '2023-04-05', '2023-04-08', 'Pending',   'Credit Card', 'Standard', 0.000,  149.99, NULL),
-    (56, '2023-04-06', '2023-04-09', 'Completed', 'PayPal',      'Overnight',0.000,  429.99, NULL),
-    (57, '2023-04-07', '2023-04-10', 'Completed', 'Credit Card', 'Standard', 0.000,   64.99, NULL),
-    (58, '2023-04-08', '2023-04-11', 'Cancelled', 'Credit Card', 'Standard', 0.000,    0.00, NULL),
-    (59, '2023-04-09', '2023-04-12', 'Completed', 'Debit Card',  'Ground',   0.000,  219.99, NULL),
-    (60, '2023-04-10', '2023-04-13', 'Completed', 'Credit Card', 'Express',  15.000, 299.99, NULL),
-    -- Batch 11: May 2023
-    (61, '2023-05-01', '2023-05-04', 'Completed', 'PayPal',      'Standard', 0.000,   79.99, NULL),
-    (62, '2023-05-02', '2023-05-05', 'Completed', 'Credit Card', 'Standard', 0.000,  129.99, NULL),
-    (63, '2023-05-03', '2023-05-06', 'Returned',  'Credit Card', 'Express',  0.000,  399.99, NULL),
-    (64, '2023-05-04', '2023-05-07', 'Completed', 'Debit Card',  'Standard', 5.000,   99.99, NULL),
-    (65, '2023-05-05', '2023-05-08', 'Completed', 'Credit Card', 'Ground',   0.000,  249.99, NULL),
-    (66, '2023-05-06', '2023-05-09', 'Shipped',   'PayPal',      'Standard', 0.000,  179.99, NULL),
-    (67, '2023-05-07', '2023-05-10', 'Completed', 'Credit Card', 'Standard', 10.000, 349.99, NULL),
-    (68, '2023-05-08', '2023-05-11', 'Completed', 'Visa',        'Express',  0.000,   59.99, NULL),
-    (69, '2023-05-09', '2023-05-12', 'Completed', 'Credit Card', 'Standard', 0.000,  189.99, NULL),
-    (70, '2023-05-10', '2023-05-13', 'Pending',   'Bank Transfer','Standard',0.000,  449.99, NULL),
-    -- Batch 12: June 2023
-    (71, '2023-06-01', '2023-06-04', 'Completed', 'Credit Card', 'Standard', 0.000,  109.99, NULL),
-    (72, '2023-06-02', '2023-06-05', 'Completed', 'PayPal',      'Ground',   5.000,  289.99, NULL),
-    (73, '2023-06-03', '2023-06-06', 'Completed', 'Credit Card', 'Express',  0.000,   49.99, NULL),
-    (74, '2023-06-04', '2023-06-07', 'Refunded',  'Debit Card',  'Standard', 0.000,  159.99, NULL),
-    (75, '2023-06-05', '2023-06-08', 'Completed', 'Credit Card', 'Standard', 10.000, 379.99, NULL),
-    (76, '2023-06-06', '2023-06-09', 'Completed', 'Credit Card', 'Overnight',0.000,  499.99, NULL),
-    (77, '2023-06-07', '2023-06-10', 'Cancelled', 'PayPal',      'Standard', 0.000,    0.00, 'OOS - cancelled'),
-    (78, '2023-06-08', '2023-06-11', 'Completed', 'Credit Card', 'Express',  5.000,  139.99, NULL),
-    (79, '2023-06-09', '2023-06-12', 'Completed', 'Mastercard',  'Standard', 0.000,  229.99, NULL),
-    (80, '2023-06-10', '2023-06-13', 'Shipped',   'Credit Card', 'Ground',   0.000,  319.99, NULL),
-    -- Batch 13: July–October 2023
-    (81, '2023-07-05', '2023-07-08', 'Completed', 'Credit Card', 'Standard', 0.000,  149.99, NULL),
-    (82, '2023-07-12', '2023-07-15', 'Completed', 'PayPal',      'Express',  0.000,  429.99, NULL),
-    (83, '2023-07-19', '2023-07-22', 'Completed', 'Credit Card', 'Standard', 5.000,   89.99, NULL),
-    (84, '2023-07-26', '2023-07-29', 'Returned',  'Debit Card',  'Ground',   0.000,  199.99, NULL),
-    (85, '2023-08-02', '2023-08-05', 'Completed', 'Credit Card', 'Standard', 0.000,  309.99, NULL),
-    (86, '2023-08-09', '2023-08-12', 'Completed', 'PayPal',      'Express',  10.000, 129.99, NULL),
-    (87, '2023-08-16', '2023-08-19', 'Shipped',   'Credit Card', 'Standard', 0.000,  259.99, NULL),
-    (88, '2023-08-23', '2023-08-26', 'Completed', 'Visa',        'Ground',   0.000,   79.99, NULL),
-    (89, '2023-08-30', '2023-09-02', 'Completed', 'Credit Card', 'Standard', 0.000,  449.99, NULL),
-    (90, '2023-09-06', '2023-09-09', 'Completed', 'PayPal',      'Express',  5.000,  179.99, NULL),
-    (91, '2023-09-13', '2023-09-16', 'Cancelled', 'Credit Card', 'Standard', 0.000,    0.00, 'Changed mind'),
-    (92, '2023-09-20', '2023-09-23', 'Completed', 'Debit Card',  'Ground',   0.000,  299.99, NULL),
-    (93, '2023-09-27', '2023-09-30', 'Completed', 'Credit Card', 'Standard', 15.000, 499.99, NULL),
-    (94, '2023-10-04', '2023-10-07', 'Completed', 'PayPal',      'Express',  0.000,  119.99, NULL),
-    (95, '2023-10-11', '2023-10-14', 'Returned',  'Credit Card', 'Standard', 0.000,  399.99, NULL),
-    (96, '2023-10-18', '2023-10-21', 'Completed', 'Credit Card', 'Ground',   0.000,  229.99, NULL),
-    (97, '2023-10-25', '2023-10-28', 'Completed', 'Mastercard',  'Standard', 5.000,  159.99, NULL),
-    -- Batch 14: Nov–Dec 2023 including Black Friday
-    (98,  '2023-11-01', '2023-11-04', 'Completed', 'Credit Card', 'Express',  0.000,  339.99, NULL),
-    (99,  '2023-11-08', '2023-11-11', 'Completed', 'PayPal',      'Standard', 10.000, 189.99, NULL),
-    (100, '2023-11-15', '2023-11-18', 'Completed', 'Credit Card', 'Ground',   0.000,   89.99, NULL),
-    (1,   '2023-11-24', '2023-11-28', 'Completed', 'Credit Card', 'Standard', 20.000,1299.99, 'Black Friday'),
-    (2,   '2023-11-24', '2023-11-28', 'Completed', 'PayPal',      'Express',  20.000, 799.99, 'Black Friday'),
-    (3,   '2023-11-25', '2023-11-29', 'Completed', 'Credit Card', 'Standard', 20.000, 399.99, 'BF Sale'),
-    (4,   '2023-11-25', '2023-11-29', 'Completed', 'Debit Card',  'Standard', 20.000, 249.99, NULL),
-    (5,   '2023-11-26', '2023-11-30', 'Completed', 'Credit Card', 'Ground',   20.000, 149.99, NULL),
-    (6,   '2023-12-01', '2023-12-05', 'Completed', 'PayPal',      'Express',  0.000,  599.99, NULL),
-    (7,   '2023-12-05', '2023-12-09', 'Completed', 'Credit Card', 'Standard', 10.000, 329.99, NULL),
-    (8,   '2023-12-10', '2023-12-14', 'Shipped',   'Credit Card', 'Express',  0.000,  899.99, NULL),
-    (9,   '2023-12-15', '2023-12-19', 'Completed', 'Mastercard',  'Ground',   5.000,  199.99, NULL),
-    (10,  '2023-12-20', NULL,         'Pending',   'Credit Card', 'Overnight',0.000,  449.99, 'Christmas gift'),
-    (11,  '2023-12-21', NULL,         'Pending',   'PayPal',      'Overnight',0.000,  279.99, NULL),
-    (12,  '2023-12-22', NULL,         'Pending',   'Credit Card', 'Overnight',0.000,  159.99, NULL),
-    -- Batch 15: 2024 orders with typos in status/payment/shipping
-    (50,  '2024-01-03', '2024-01-06', 'Completed',   'Credit Card', 'Standard',  0.000,  129.99, NULL),
-    (51,  '2024-01-10', '2024-01-13', 'Completed',   'PayPal',      'Ground',    5.000,  289.99, NULL),
-    (52,  '2024-01-17', '2024-01-20', 'Completed',   'Credit Card', 'Express',   0.000,  399.99, NULL),
-    (53,  '2024-01-24', '2024-01-27', 'Shipped',     'Debit Card',  'Standard',  0.000,  169.99, NULL),
-    (54,  '2024-01-31', '2024-02-03', 'Completed',   'Credit Card', 'Ground',    10.000, 229.99, NULL),
-    (55,  '2024-02-07', '2024-02-10', 'Completed',   'PayPal',      'Express',   0.000,   79.99, NULL),
-    (56,  '2024-02-14', '2024-02-17', 'Completed',   'Credit Card', 'Standard',  5.000,  349.99, NULL),
-    (57,  '2024-02-21', '2024-02-24', 'Cancelled',   'Credit Card', 'Standard',  0.000,    0.00, NULL),
-    (58,  '2024-02-28', '2024-03-02', 'Completed',   'Mastercard',  'Ground',    0.000,  199.99, NULL),
-    (59,  '2024-03-06', '2024-03-09', 'Completed',   'Credit Card', 'Standard',  15.000, 449.99, NULL),
-    (60,  '2024-03-13', '2024-03-16', 'Returned',    'PayPal',      'Express',   0.000,  299.99, NULL),
-    (61,  '2024-03-20', '2024-03-23', 'Completed',   'Credit Card', 'Ground',    0.000,  139.99, NULL),
-    (62,  '2024-03-27', '2024-03-30', 'Completed',   'Visa',        'Standard',  0.000,  259.99, NULL),
-    (63,  '2024-04-03', '2024-04-06', 'Completed',   'Credit Card', 'Express',   5.000,  179.99, NULL),
-    (64,  '2024-04-10', '2024-04-13', 'Completed',   'PayPal',      'Standard',  0.000,   99.99, NULL),
-    (65,  '2024-04-17', '2024-04-20', 'Complet ed',  'Credit Card', 'Standard',  0.000,  369.99, NULL),
-    (66,  '2024-04-24', '2024-04-27', 'Completed',   'Credi Card',  'Ground',    0.000,  149.99, NULL),
-    (67,  '2024-05-01', '2024-05-04', 'Completed',   'Credit Card', 'Standerd',  5.000,  209.99, NULL),
-    (68,  '2024-05-08', '2024-05-11', 'Completed',   'Credit Card', 'Standard',  0.000,   89.99, NULL),
-    (69,  '2024-05-15', '2024-05-18', 'Shipped',     'PayPal',      'Express',   0.000,  319.99, NULL),
-    (70,  '2024-05-22', '2024-05-25', 'Completed',   'Credit Card', 'Ground',    10.000, 479.99, NULL),
-    (71,  '2024-05-29', '2024-06-01', 'Completed',   'Debit Card',  'Standard',  0.000,  129.99, NULL),
-    (72,  '2024-06-05', '2024-06-08', 'Completed',   'Credit Card', 'Express',   5.000,  269.99, NULL),
-    (73,  '2024-06-12', '2024-06-15', 'Cancelled',   'PayPal',      'Standard',  0.000,    0.00, NULL),
-    (74,  '2024-06-19', '2024-06-22', 'Completed',   'Credit Card', 'Ground',    0.000,  199.99, NULL),
-    (75,  '2024-06-26', '2024-06-29', 'Completed',   'Mastercard',  'Standard',  0.000,  349.99, NULL),
-    (76,  '2024-07-03', '2024-07-06', 'Returned',    'Credit Card', 'Express',   0.000,  399.99, NULL),
-    (77,  '2024-07-10', '2024-07-13', 'Completed',   'PayPal',      'Standard',  5.000,   69.99, NULL),
-    (78,  '2024-07-17', '2024-07-20', 'Completed',   'Credit Card', 'Ground',    0.000,  249.99, NULL),
-    (79,  '2024-07-24', '2024-07-27', 'Completed',   'Visa',        'Standard',  0.000,  129.99, NULL),
-    (80,  '2024-07-31', '2024-08-03', 'Completed',   'Credit Card', 'Express',   10.000, 299.99, NULL);
+-- Normal orders
+(1,  '2023-01-15', '2023-01-18', 'Standard',    'Delivered',  'Credit Card',  'Online',    'East',    NULL),
+(2,  '2023-01-20', '2023-01-23', 'Express',     'Delivered',  'PayPal',       'Online',    'West',    NULL),
+(3,  '2023-02-05', '2023-02-08', 'Standard',    'Delivered',  'Credit Card',  'In-Store',  'Central', NULL),
+(4,  '2023-02-14', '2023-02-17', 'Overnight',   'Delivered',  'Debit Card',   'Online',    'South',   NULL),
+(5,  '2023-03-01', '2023-03-04', 'Standard',    'Shipped',    'Credit Card',  'Online',    'West',    NULL),
+
+-- Duplicate order
+(1,  '2023-01-15', '2023-01-18', 'Standard',    'Delivered',  'Credit Card',  'Online',    'East',    NULL),
+
+-- Ship date BEFORE order date (logical error)
+(10, '2023-04-15', '2023-04-10', 'Standard',    'Delivered',  'Credit Card',  'Online',    'East',    'Urgent order — backdated?'),
+
+-- Future dates
+(12, '2099-01-01', '2099-01-05', 'Standard',    'Processing', 'Credit Card',  'Online',    'East',    NULL),
+
+-- Missing/null dates
+(15, NULL,          NULL,         'Standard',    'Pending',    'Credit Card',  'Online',    'East',    NULL),
+(16, '',            '',           'Express',     'Shipped',    NULL,           '',          NULL,      NULL),
+(17, 'N/A',         'N/A',        NULL,          NULL,         'N/A',          'N/A',       'N/A',     'Bad record'),
+
+-- Inconsistent date formats
+(20, '03/15/2023',  '03/18/2023', 'Standard',    'Delivered',  'Credit Card',  'Online',    'East',    NULL),
+(21, '15-Mar-2023', '18-Mar-2023','Express',     'Delivered',  'PayPal',       'Online',    'West',    NULL),
+(22, '2023/04/01',  '2023/04/04', 'Standard',    'Delivered',  'Credit Card',  'In-Store',  'Central', NULL),
+(23, 'April 5, 2023','April 8, 2023','Overnight','Delivered',  'Debit Card',   'Online',    'South',   NULL),
+
+-- Status inconsistencies
+(25, '2023-04-20', '2023-04-23', 'Standard',    'delivered',  'Credit Card',  'Online',    'East',    NULL),
+(26, '2023-04-22', '2023-04-25', 'Express',     'DELIVERED',  'PayPal',       'Online',    'West',    NULL),
+(27, '2023-04-25', NULL,         'Standard',    'Shiped',     'Credit Card',  'In-Store',  'Central', 'Typo in status'),
+(28, '2023-05-01', NULL,         'Standard',    'Pendng',     'Debit Card',   'Online',    'South',   NULL),
+(29, '2023-05-05', '2023-05-08', 'Express',     'Canceld',    'Credit Card',  'Online',    'East',    NULL),
+(30, '2023-05-10', '2023-05-13', 'Standrd',     'Delivered',  'Crdit Card',   'Onlne',     'Wst',     'Multiple typos'),
+
+-- Shipping method inconsistencies
+(31, '2023-05-15', '2023-05-18', 'standard',    'Delivered',  'Credit Card',  'Online',    'East',    NULL),
+(32, '2023-05-20', '2023-05-23', 'EXPRESS',     'Delivered',  'PayPal',       'Online',    'West',    NULL),
+(33, '2023-05-25', '2023-05-26', 'Over Night',  'Delivered',  'Credit Card',  'In-Store',  'Central', NULL),
+(34, '2023-06-01', '2023-06-04', '2-Day',       'Delivered',  'Debit Card',   'Online',    'South',   NULL),
+(35, '2023-06-05', '2023-06-08', 'Two Day',     'Delivered',  'Credit Card',  'Online',    'East',    NULL);
+
+-- Generate more orders procedurally
+INSERT INTO orders
+    (customer_id, order_date, ship_date, shipping_method, order_status, payment_method, sales_channel, region, notes)
+SELECT
+    -- Random customer_id (some may not exist — orphans)
+    CASE (random()*20)::int
+        WHEN 0 THEN 9999   -- orphan reference
+        ELSE 1 + (random() * 199)::int
+    END,
+    -- Order date with format issues
+    CASE (random()*8)::int
+        WHEN 0 THEN TO_CHAR(DATE '2023-01-01' + (random()*365)::int, 'MM/DD/YYYY')
+        WHEN 1 THEN TO_CHAR(DATE '2023-01-01' + (random()*365)::int, 'DD-Mon-YYYY')
+        WHEN 2 THEN ''
+        WHEN 3 THEN NULL
+        ELSE TO_CHAR(DATE '2023-01-01' + (random()*365)::int, 'YYYY-MM-DD')
+    END,
+    -- Ship date (sometimes before order date for logical errors)
+    CASE (random()*10)::int
+        WHEN 0 THEN NULL
+        WHEN 1 THEN ''
+        WHEN 2 THEN TO_CHAR(DATE '2023-01-01' + (random()*365)::int - 10, 'YYYY-MM-DD')  -- possibly before order
+        ELSE TO_CHAR(DATE '2023-01-01' + (random()*365)::int + (1 + (random()*7)::int), 'YYYY-MM-DD')
+    END,
+    -- Shipping method with inconsistencies
+    CASE (random()*10)::int
+        WHEN 0 THEN 'standard'
+        WHEN 1 THEN 'EXPRESS'
+        WHEN 2 THEN 'Over Night'
+        WHEN 3 THEN 'Standrd'
+        WHEN 4 THEN NULL
+        WHEN 5 THEN '2-Day'
+        ELSE (ARRAY['Standard','Express','Overnight','2-Day','Economy'])[1 + (random()*4)::int]
+    END,
+    -- Order status with issues
+    CASE (random()*12)::int
+        WHEN 0 THEN 'delivered'
+        WHEN 1 THEN 'DELIVERED'
+        WHEN 2 THEN 'Shiped'
+        WHEN 3 THEN 'Pendng'
+        WHEN 4 THEN 'Canceld'
+        WHEN 5 THEN NULL
+        WHEN 6 THEN 'Procesing'
+        ELSE (ARRAY['Delivered','Shipped','Processing','Pending','Cancelled','Returned'])[1 + (random()*5)::int]
+    END,
+    -- Payment method
+    CASE (random()*8)::int
+        WHEN 0 THEN 'credit card'
+        WHEN 1 THEN 'PAYPAL'
+        WHEN 2 THEN 'Crdit Card'
+        WHEN 3 THEN NULL
+        ELSE (ARRAY['Credit Card','PayPal','Debit Card','Wire Transfer','Cash','Gift Card'])[1 + (random()*5)::int]
+    END,
+    -- Sales channel
+    CASE (random()*6)::int
+        WHEN 0 THEN 'online'
+        WHEN 1 THEN 'IN-STORE'
+        WHEN 2 THEN NULL
+        ELSE (ARRAY['Online','In-Store','Phone','Wholesale'])[1 + (random()*3)::int]
+    END,
+    -- Region
+    CASE (random()*8)::int
+        WHEN 0 THEN 'east'
+        WHEN 1 THEN 'WEST'
+        WHEN 2 THEN NULL
+        WHEN 3 THEN 'N/A'
+        ELSE (ARRAY['East','West','Central','South','Northeast','Southeast','Northwest','Southwest'])[1 + (random()*7)::int]
+    END,
+    -- Notes (mostly null)
+    CASE (random()*15)::int
+        WHEN 0 THEN 'Customer called about this order'
+        WHEN 1 THEN 'RUSH ORDER'
+        WHEN 2 THEN 'Possible fraud — review needed'
+        WHEN 3 THEN 'Gift wrapping requested'
+        ELSE NULL
+    END
+FROM generate_series(1, 275);
 
 
--- SECTION 7: ORDER ITEMS (~600 rows)
--- Issues: zero/negative quantity, wrong line totals,
---         discount applied but total unchanged,
---         orphaned order_id / product_id, duplicate rows,
---         null foreign keys
+-- ============================================================
+-- STEP 6: INSERT MESSY ORDER ITEMS DATA (~500+ rows)
+-- ============================================================
 
-
+-- Hand-crafted problem rows
 INSERT INTO order_items
-    (order_id, product_id, quantity, unit_price, discount_amt, line_total)
+    (order_id, product_id, quantity, unit_price, discount, total_amount)
 VALUES
-    -- Orders 1–10
-    (1,  4,  1,  29.99,  0.00,   29.99),
-    (1,  9,  1, 129.99,  0.00,  129.99),
-    (2,  20, 2,  19.99,  2.00,   37.98),
-    (2,  26, 1,  49.99,  0.00,   49.99),
-    (3,  14, 1, 299.99,  0.00,  299.99),
-    (4,  22, 1,  89.99,  9.00,   89.99),
-    (4,  17, 2,  59.99,  0.00,  119.98),
-    (5,  6,  1,  49.99,  0.00,   49.99),
-    (6,  10, 1,  79.99,  0.00,   79.99),
-    (7,  15, 1, 199.99, 10.00,  189.99),
-    (8,  7,  1, 399.99,  0.00,  399.99),
-    (9,  26, 1, 249.99,  0.00,  249.99),
-    (10, 4,  1,  29.99,  0.00,   29.99),
-    -- Orders 11–20
-    (11, 13, 1, 109.99,  0.00,  109.99),
-    (11, 7,  1, 399.99, 60.00,  339.99),
-    (11, 15, 1, 199.99, 30.00,  169.99),
-    (12, 13, 1, 109.99,  0.00,  109.99),
-    (13, 10, 1,  79.99,  0.00,   79.99),
-    (14, 32, 2,  19.99,  0.00,   39.98),
-    (15, 15, 1, 199.99, 10.00,  199.99),
-    (16, 17, 1,  59.99,  0.00,   59.99),
-    (17, 28, 1,  39.99,  0.00,   39.99),
-    (17, 29, 1, 299.99,  0.00,  299.99),
-    (18, 4,  1,  29.99,  0.00,    0.00),
-    (19, 22, 1,  89.99,  9.00,   80.99),
-    (20, 7,  1, 399.99,  0.00,  399.99),
-    -- Orders 21–40
-    (21, 9,  1, 129.99,  0.00,  129.99),
-    (22, 6,  1,  49.99,  0.00,   49.99),
-    (23, 15, 1, 199.99,  0.00,  199.99),
-    (24, 14, 1, 299.99, 15.00,  284.99),
-    (25, 10, 1,  79.99,  0.00,   79.99),
-    (26, 22, 1,  89.99,  0.00,   89.99),
-    (26, 20, 2,  19.99,  0.00,   39.98),
-    (26, 28, 1,  39.99,  0.00,   39.99),
-    (27, 10, 1,  79.99,  0.00,   79.99),
-    (28, 26, 1, 249.99, 25.00,  224.99),
-    (29, 4,  2,  29.99,  0.00,   59.98),
-    (29, 28, 1,  39.99,  0.00,   39.99),
-    (30, 32, 1,  19.99,  0.00,   19.99),
-    (31, 13, 1, 109.99,  0.00,  109.99),
-    (32, 7,  1, 399.99,  0.00,  399.99),
-    (33, 17, 1,  59.99,  0.00,   59.99),
-    (34, 22, 1,  89.99,  5.00,   84.99),
-    (34, 17, 2,  59.99,  0.00,  119.98),
-    (35, 14, 1, 299.99,  0.00,  299.99),
-    (36, 9,  1, 129.99,  0.00,  129.99),
-    -- Business rule violations in items
-    (37, 4,   0,  29.99,  0.00,    0.00),
-    (37, 10, -1,  79.99,  0.00,  -79.99),
-    (38, 9,   1, 129.99,  0.00,  129.99),
-    (39, 17,  1,  59.99,  0.00,   -9.99),
-    (40, 28,  1,  39.99,  0.00,   39.99),
-    -- Orphaned items
-    (9998, 4,  1,  29.99, 0.00,  29.99),
-    (9997, 9,  1, 129.99, 0.00, 129.99),
-    (NULL, 10, 1,  79.99, 0.00,  79.99),
-    -- Orders 41–60
-    (41, 22, 1,  89.99, 0.00,  89.99),
-    (41, 17, 1,  59.99, 0.00,  59.99),
-    (42, 15, 1, 199.99, 0.00, 199.99),
-    (42, 24, 1,  45.99, 0.00,  45.99),
-    (43, 7,  1, 399.99, 0.00, 399.99),
-    (43, 28, 1,  39.99, 0.00,  39.99),
-    (44, 9,  1, 129.99, 0.00, 129.99),
-    (45, 7,  1, 399.99, 0.00, 399.99),
-    (45, 22, 1,  89.99, 0.00,  89.99),
-    (46, 10, 1,  79.99, 4.00,  79.99),
-    (47, 7,  1, 399.99, 0.00, 399.99),
-    (48, 22, 1,  89.99, 0.00,  89.99),
-    (48, 15, 1, 199.99, 0.00, 199.99),
-    (49, 14, 1, 299.99, 0.00, 299.99),
-    (50, 10, 1,  79.99, 0.00,  79.99),
-    (50, 22, 1,  89.99, 0.00,  89.99),
-    -- Duplicate line items
-    (1,  4,  1,  29.99, 0.00,  29.99),
-    (1,  4,  1,  29.99, 0.00,  29.99),
-    (3,  14, 1, 299.99, 0.00, 299.99),
-    -- Orders 51–80
-    (51, 9,  1, 129.99, 0.00, 129.99),
-    (51, 28, 1,  39.99, 0.00,  39.99),
-    (52, 7,  1, 399.99, 0.00, 399.99),
-    (53, 15, 1, 199.99, 0.00, 199.99),
-    (54, 10, 1,  79.99, 8.00,  71.99),
-    (55, 22, 1,  89.99, 0.00,  89.99),
-    (56, 7,  1, 399.99, 0.00, 399.99),
-    (56, 32, 1,  24.99, 0.00,  24.99),
-    (57, 17, 1,  59.99, 5.00,  54.99),
-    (58, 4,  1,  29.99, 0.00,   0.00),
-    (59, 13, 1, 109.99, 0.00, 109.99),
-    (59, 22, 1,  89.99, 0.00,  89.99),
-    (60, 14, 1, 299.99, 0.00, 299.99),
-    (61, 10, 1,  79.99, 0.00,  79.99),
-    (62, 9,  1, 129.99, 0.00, 129.99),
-    (63, 7,  1, 399.99, 0.00, 399.99),
-    (64, 13, 1, 109.99, 5.50, 104.49),
-    (65, 22, 1,  89.99, 0.00,  89.99),
-    (65, 15, 1, 199.99, 0.00, 199.99),
-    (66, 6,  3,  49.99, 0.00, 149.97),
-    (67, 14, 1, 399.99, 0.00, 399.99),
-    (68, 17, 1,  59.99, 0.00,  59.99),
-    (69, 15, 1, 199.99, 0.00, 199.99),
-    (69, 28, 1,  39.99, 0.00,  39.99),
-    (70, 7,  1, 399.99, 0.00, 399.99),
-    (70, 36, 1, 179.99, 0.00, 179.99),
-    (71, 10, 1,  79.99, 0.00,  79.99),
-    (72, 13, 1, 109.99, 0.00, 109.99),
-    (72, 22, 1,  89.99, 0.00,  89.99),
-    (73, 6,  1,  49.99, 0.00,  49.99),
-    (74, 22, 1,  89.99, 0.00,  89.99),
-    (74, 15, 1, 199.99, 0.00, 199.99),
-    (75, 7,  1, 399.99, 0.00, 399.99),
-    (75, 9,  1, 129.99, 0.00, 129.99),
-    (76, 7,  1, 399.99, 0.00, 399.99),
-    (77, 4,  1,  29.99, 0.00,   0.00),
-    (78, 9,  1, 129.99, 7.00, 122.99),
-    (79, 9,  1, 129.99, 0.00, 129.99),
-    (80, 14, 1, 299.99, 0.00, 299.99),
-    -- Orders 81–100
-    (81, 22, 1,  89.99, 0.00,  89.99),
-    (81, 17, 1,  59.99, 0.00,  59.99),
-    (82, 7,  1, 399.99, 0.00, 399.99),
-    (82, 36, 1, 179.99, 0.00, 179.99),
-    (83, 10, 1,  79.99, 4.00,  75.99),
-    (84, 15, 1, 199.99, 0.00, 199.99),
-    (85, 14, 1, 299.99, 0.00, 299.99),
-    (85, 22, 1,  89.99, 0.00,  89.99),
-    (86, 9,  1, 129.99,13.00, 116.99),
-    (87, 13, 1, 109.99, 0.00, 109.99),
-    (87, 22, 1,  89.99, 0.00,  89.99),
-    (88, 10, 1,  79.99, 0.00,  79.99),
-    (89, 7,  1, 399.99, 0.00, 399.99),
-    (89, 36, 1, 179.99, 0.00, 179.99),
-    (90, 15, 1, 199.99, 0.00, 199.99),
-    (91, 4,  2,  29.99, 0.00,   0.00),
-    (92, 14, 1, 299.99, 0.00, 299.99),
-    (93, 7,  1, 399.99, 0.00, 399.99),
-    (93, 36, 1, 179.99, 0.00, 179.99),
-    (93, 13, 1, 109.99, 0.00, 109.99),
-    (94, 13, 1, 109.99, 0.00, 109.99),
-    (95, 7,  1, 399.99, 0.00, 399.99),
-    (96, 13, 1, 109.99, 0.00, 109.99),
-    (96, 22, 1,  89.99, 0.00,  89.99),
-    (97, 22, 1,  89.99, 0.00,  89.99),
-    (97, 15, 1, 199.99, 0.00, 199.99),
-    (98, 14, 1, 299.99, 0.00, 299.99),
-    (98, 22, 1,  89.99, 0.00,  89.99),
-    (99, 9,  1, 129.99, 0.00, 129.99),
-    (99, 17, 2,  59.99, 0.00, 119.98),
-    (100,10, 1,  79.99, 0.00,  79.99),
-    -- Orders 101–180 (2024 batch)
-    (101, 9,  1, 129.99, 0.00, 129.99),
-    (102, 13, 1, 109.99, 0.00, 109.99),
-    (102, 22, 1,  89.99, 0.00,  89.99),
-    (103, 7,  1, 399.99, 0.00, 399.99),
-    (104, 15, 1, 199.99, 0.00, 199.99),
-    (104, 4,  1,  29.99, 0.00,  29.99),
-    (105, 6,  1,  49.99, 0.00,  49.99),
-    (105, 10, 1,  79.99, 0.00,  79.99),
-    (106, 14, 1, 299.99, 0.00, 299.99),
-    (106, 36, 1, 179.99, 0.00, 179.99),
-    (107, 9,  2, 129.99, 0.00, 259.98),
-    (108, 22, 1,  89.99, 0.00,   0.00),
-    (109, 7,  1, 399.99, 0.00, 399.99),
-    (109, 13, 1, 109.99, 0.00, 109.99),
-    (110, 15, 1, 199.99,10.00, 189.99),
-    (111, 4,  3,  29.99, 0.00,  89.97),
-    (112, 10, 1,  79.99, 0.00,  79.99),
-    (113, 14, 1, 299.99,15.00, 284.99),
-    (114, 9,  1, 129.99, 0.00, 129.99),
-    (115, 22, 2,  89.99, 0.00, 179.98),
-    (116, 7,  1, 399.99, 0.00, 399.99),
-    (116, 4,  1,  29.99, 0.00,  29.99),
-    (117, 13, 1, 109.99, 5.50, 104.49),
-    (118, 15, 1, 199.99, 0.00, 199.99),
-    (119, 36, 1, 179.99, 0.00, 179.99),
-    (119, 6,  2,  49.99, 0.00,  99.98),
-    (120, 9,  1, 129.99, 0.00, 129.99),
-    (121, 14, 1, 299.99, 0.00, 299.99),
-    (122, 22, 1,  89.99, 0.00,  89.99),
-    (122, 10, 1,  79.99, 0.00,  79.99),
-    (123, 7,  1, 399.99, 0.00,   0.00),
-    (124, 13, 1, 109.99, 0.00, 109.99),
-    (125, 15, 1, 199.99,20.00, 179.99),
-    (126, 9,  1, 129.99, 0.00, 129.99),
-    (126, 4,  2,  29.99, 0.00,  59.98),
-    (127, 14, 1, 299.99, 0.00, 299.99),
-    (128, 22, 1,  89.99, 8.99,  80.00),
-    (129, 7,  1, 399.99, 0.00, 399.99),
-    (130, 36, 1, 179.99, 0.00, 179.99),
-    (131, 9,  1, 129.99, 0.00, 129.99),
-    (132, 13, 2, 109.99, 0.00, 219.98),
-    (133, 15, 1, 199.99, 0.00, 199.99),
-    (134, 4,  1,  29.99, 0.00,  29.99),
-    (135, 22, 1,  89.99, 0.00,  89.99),
-    (136, 7,  1, 399.99, 0.00, 399.99),
-    (137, 14, 1, 299.99, 0.00, 299.99),
-    (138, 10, 1,  79.99, 0.00,  79.99),
-    (139, 9,  1, 129.99,13.00, 116.99),
-    (140, 15, 1, 199.99, 0.00, 199.99),
-    (141, 22, 1,  89.99, 0.00,  89.99),
-    (142, 13, 1, 109.99, 0.00, 109.99),
-    (143, 7,  1, 399.99, 0.00, 399.99),
-    (144, 4,  2,  29.99, 0.00,  59.98),
-    (145, 36, 1, 179.99, 0.00, 179.99),
-    (146, 9,  1, 129.99, 0.00, 129.99),
-    (147, 14, 1, 299.99,30.00, 269.99),
-    (148, 22, 1,  89.99, 0.00,  89.99),
-    (149, 15, 1, 199.99, 0.00, 199.99),
-    (150, 10, 1,  79.99, 0.00,  79.99),
-    (151, 7,  1, 399.99, 0.00, 399.99),
-    (152, 13, 1, 109.99, 0.00, 109.99),
-    (153, 9,  1, 129.99, 0.00, 129.99),
-    (153, 28, 1,  39.99, 0.00,  39.99),
-    (154, 22, 1,  89.99, 0.00,  89.99),
-    (155, 14, 1, 299.99, 0.00, 299.99),
-    (156, 4,  1,  29.99, 0.00,  29.99),
-    (157, 15, 1, 199.99,20.00, 179.99),
-    (158, 7,  1, 399.99, 0.00, 399.99),
-    (159, 36, 1, 179.99, 0.00, 179.99),
-    (160, 9,  1, 129.99, 0.00, 129.99),
-    (161, 13, 1, 109.99, 0.00, 109.99),
-    (162, 22, 1,  89.99, 0.00,  89.99),
-    (163, 7,  1, 399.99, 0.00, 399.99),
-    (164, 14, 1, 299.99, 0.00, 299.99),
-    (165, 15, 1, 199.99, 0.00, 199.99),
-    (166, 10, 1,  79.99, 0.00,  79.99),
-    (167, 9,  1, 129.99, 0.00, 129.99),
-    (168, 4,  3,  29.99, 0.00,  89.97),
-    (169, 22, 1,  89.99, 0.00,  89.99),
-    (170, 7,  1, 399.99, 0.00, 399.99),
-    (171, 13, 1, 109.99, 5.50, 104.49),
-    (172, 15, 1, 199.99, 0.00, 199.99),
-    (173, 36, 1, 179.99, 0.00, 179.99),
-    (174, 9,  2, 129.99, 0.00, 259.98),
-    (175, 22, 1,  89.99, 0.00,  89.99),
-    (176, 14, 1, 299.99,30.00, 269.99),
-    (177, 7,  1, 399.99, 0.00, 399.99),
-    (178, 10, 1,  79.99, 0.00,  79.99),
-    (179, 9,  1, 129.99,13.00, 116.99),
-    (180, 15, 1, 199.99, 0.00, 199.99),
-    -- Extra orphaned items
-    (100, 9999, 1,  99.99, 0.00,  99.99),
-    (100, NULL, 1,  49.99, 0.00,  49.99);
+-- Normal
+(1, 1,  '1',  '999.99',  '0',     '999.99'),
+(1, 2,  '2',  '29.99',   '0',     '59.98'),
+(2, 3,  '3',  '12.99',   '0.10',  '35.07'),    -- 12.99*3*0.9 = 35.073 (rounding issue)
+(3, 4,  '1',  '349.99',  '0.15',  '297.49'),
+(4, 5,  '1',  '599.99',  '0',     '599.99'),
+(5, 6,  '10', '4.99',    '0.05',  '47.41'),
+
+-- Total doesn't match qty * price * (1-discount) — intentional calculation error
+(6, 1,  '1',  '999.99',  '0',     '899.99'),    -- should be 999.99
+(6, 7,  '5',  '8.99',    '0',     '50.00'),     -- should be 44.95
+
+-- Negative quantity
+(7, 8,  '-2', '449.99',  '0',     '-899.98'),
+
+-- Zero quantity
+(7, 9,  '0',  '79.99',   '0',     '0'),
+
+-- Quantity as text
+(8, 10, 'two', '59.99',  '0',     '119.98'),
+(8, 11, 'N/A', '299.99', 'N/A',   'N/A'),
+
+-- Price with currency symbols
+(9, 12, '3',  '$24.99',  '0',     '$74.97'),
+(9, 13, '2',  '34.99$',  '5%',    '66.48'),
+
+-- Discount as percentage string vs decimal
+(10, 14, '1', '39.99',   '10%',   '35.99'),
+(10, 15, '1', '39.99',   '0.10',  '35.99'),
+
+-- Missing values
+(11, 16, NULL,  '189.99',  NULL,    NULL),
+(11, 17, '',    '89.99',   '',      ''),
+(12, 18, '5',   NULL,      '0',     NULL),
+(12, 19, '3',   '',        '0',     ''),
+
+-- Extreme discount (>100% — error)
+(13, 20, '1',  '19.99',   '1.5',   '-9.99'),
+
+-- Very large quantity (outlier)
+(14, 21, '10000', '3.99',  '0.25',  '29925.00'),
+
+-- Duplicate item in same order
+(15, 1,  '1',  '999.99',  '0',     '999.99'),
+(15, 1,  '1',  '999.99',  '0',     '999.99'),
+
+-- Orphan: order_id that doesn't exist
+(99999, 2, '1', '29.99',  '0',     '29.99');
 
 
--- SECTION 8: RETURNS (80 rows)
--- Issues: duplicate returns, negative refunds, refund > price,
---         mixed date formats, null fields, condition/reason
---         case and spelling inconsistencies
+-- Generate more order items procedurally
+INSERT INTO order_items
+    (order_id, product_id, quantity, unit_price, discount, total_amount)
+SELECT
+    -- order_id
+    1 + (random() * 299)::int,
+    -- product_id
+    1 + (random() * 49)::int,
+    -- quantity with issues
+    CASE (random()*15)::int
+        WHEN 0 THEN '-1'
+        WHEN 1 THEN '0'
+        WHEN 2 THEN NULL
+        WHEN 3 THEN ''
+        WHEN 4 THEN 'N/A'
+        ELSE (1 + (random()*20)::int)::text
+    END,
+    -- unit_price with issues
+    CASE (random()*12)::int
+        WHEN 0 THEN '$' || ROUND((random()*500)::numeric, 2)::text
+        WHEN 1 THEN ROUND((random()*500)::numeric, 2)::text || '$'
+        WHEN 2 THEN NULL
+        WHEN 3 THEN ''
+        WHEN 4 THEN '-' || ROUND((random()*100)::numeric, 2)::text
+        ELSE ROUND((1 + random()*500)::numeric, 2)::text
+    END,
+    -- discount with issues
+    CASE (random()*10)::int
+        WHEN 0 THEN ((random()*30)::int)::text || '%'
+        WHEN 1 THEN NULL
+        WHEN 2 THEN ''
+        WHEN 3 THEN 'N/A'
+        WHEN 4 THEN ROUND((random()*0.5)::numeric, 2)::text
+        ELSE '0'
+    END,
+    -- total_amount — often WRONG on purpose
+    CASE (random()*8)::int
+        WHEN 0 THEN NULL
+        WHEN 1 THEN ''
+        WHEN 2 THEN '$' || ROUND((random()*2000)::numeric, 2)::text
+        WHEN 3 THEN 'N/A'
+        ELSE ROUND((random()*2000)::numeric, 2)::text
+    END
+FROM generate_series(1, 480);
 
+-- ============================================================
+-- STEP 7: VERIFICATION QUERIES
+-- Count rows in each table
+-- ============================================================
 
-INSERT INTO returns
-    (order_id, product_id, return_date, reason, refund_amount, condition, processed_by)
-VALUES
-    -- Clean baseline
-    (44, 9,  '2023-03-15', 'Defective product',          129.99, 'Damaged',  'Sarah Mitchell'),
-    (45, 7,  '2023-03-18', 'Not as described',           399.99, 'Good',     'David Okafor'),
-    (47, 7,  '2023-03-20', 'Changed mind',               399.99, 'Like New', 'Maria Chen'),
-    (63, 7,  '2023-05-11', 'Defective product',          399.99, 'Damaged',  'James Holloway'),
-    (74, 22, '2023-06-12', 'Wrong item received',         89.99, 'Good',     'Sarah Mitchell'),
-    (84, 15, '2023-08-05', 'Not as described',           199.99, 'Like New', 'David Okafor'),
-    (95, 7,  '2023-10-20', 'Defective product',          399.99, 'Damaged',  'Maria Chen'),
-    (60, 14, '2024-03-25', 'Changed mind',               299.99, 'Like New', 'James Holloway'),
-    (76, 7,  '2024-07-15', 'Defective product',          399.99, 'Damaged',  'Sarah Mitchell'),
-    -- Case inconsistencies
-    (46, 10, '2023-03-16', 'defective product',           79.99, 'damaged',  'sarah mitchell'),
-    (48, 22, '2023-03-21', 'CHANGED MIND',               159.99, 'LIKE NEW', 'DAVID OKAFOR'),
-    (3,   7, '2023-05-15', 'Customer changed mind',      399.99, 'Like New', 'james holloway'),
-    -- Mixed date formats
-    (44,  9, '03/20/2023', 'Duplicate return entry',     129.99, 'Damaged',  'Sarah Mitchell'),
-    (63,  7, 'May 12, 2023','Defective - screen cracked',399.99, 'Damaged',  'James Holloway'),
-    (84, 15, '08-06-2023', 'Item not working',           199.99, 'Damaged',  'David Okafor'),
-    -- Negative and zero refunds
-    (5,   6, '2023-01-20', 'Did not like',               -49.99, 'Good',     'Maria Chen'),
-    (7,  15, '2023-01-21', 'Wrong color',                999.99, 'Good',     'James Holloway'),
-    (8,   7, '2023-01-22', 'Defective',                    0.00, 'Damaged',  'Sarah Mitchell'),
-    -- NULL fields
-    (95,  7, '2023-10-21', NULL,                         399.99, 'Damaged',  'Maria Chen'),
-    (60, 14, NULL,         'Changed mind',               299.99, 'Like New', NULL),
-    (NULL,9, '2023-07-01', 'Defective',                   79.99, 'Damaged',  'David Okafor'),
-    -- Condition inconsistencies
-    (45,  7, '2023-03-25', 'Reconsidered purchase',      399.99, 'like new', 'James Holloway'),
-    (47,  7, '2023-03-28', 'Box damaged in transit',     399.99, 'Used',     'Maria Chen'),
-    (44,  9, '2023-03-17', 'Wrong size',                 129.99, 'New',      'Sarah Mitchell'),
-    (95,  7, '2023-10-22', 'Screen defect',              399.99, 'Dmgd',     'James Holloway'),
-    (84, 15, '2023-08-07', 'Motor noise',                199.99, 'Works',    'David Okafor'),
-    -- Additional returns
-    (50, 10, '2023-03-20', 'Color different from photo',  79.99, 'Good',     'Carlos Mendez'),
-    (51, 9,  '2023-04-08', 'Too small',                  129.99, 'Like New', 'Lisa Nguyen'),
-    (53, 15, '2023-04-10', 'Functionality issues',       199.99, 'Damaged',  'Robert King'),
-    (56, 7,  '2023-04-13', 'Did not meet expectations',  399.99, 'Good',     'Sarah Mitchell'),
-    (59, 13, '2023-04-16', 'Compatibility issue',        109.99, 'Like New', 'Maria Chen'),
-    (61, 10, '2023-05-07', 'Changed mind',                79.99, 'Good',     'David Okafor'),
-    (65, 15, '2023-04-24', 'Product damaged on arrival', 199.99, 'Damaged',  'James Holloway'),
-    (67, 14, '2023-04-14', 'Not as described',           399.99, 'Good',     'Lisa Nguyen'),
-    (70, 7,  '2023-05-17', 'Defective',                  399.99, 'Damaged',  'Carlos Mendez'),
-    (72, 22, '2023-06-09', 'Wrong item',                  89.99, 'Good',     'Robert King'),
-    (75, 9,  '2023-06-13', 'Changed mind',               129.99, 'Like New', 'Sarah Mitchell'),
-    (80, 14, '2023-07-04', 'Defective screen',           299.99, 'Damaged',  'Maria Chen'),
-    (82, 7,  '2023-07-18', 'Item not as advertised',     399.99, 'Good',     'David Okafor'),
-    (85, 14, '2023-08-09', 'Broken on arrival',          299.99, 'Damaged',  'James Holloway'),
-    (89, 7,  '2023-09-03', 'Performance issues',         399.99, 'Like New', 'Lisa Nguyen'),
-    (93, 7,  '2023-10-01', 'Defective',                  399.99, 'Damaged',  'Maria Chen'),
-    (93, 36, '2023-10-02', 'Not heating properly',       179.99, 'Like New', 'Carlos Mendez'),
-    -- Duplicate returns
-    (44, 9,  '2023-03-15', 'Defective product',          129.99, 'Damaged',  'Sarah Mitchell'),
-    (44, 9,  '2023-03-15', 'Defective product',          129.99, 'damaged',  'sarah mitchell'),
-    -- More returns
-    (76, 7,  '2024-07-16', 'Second return request',      399.99, 'Damaged',  'JAMES HOLLOWAY'),
-    (60, 14, '2024-03-26', 'Follow-up return',           299.99, 'Like New', 'sarah mitchell'),
-    (88, 10, '2023-08-27', 'Scratched on delivery',       79.99, 'Damaged',  'David Okafor'),
-    (91, 4,  '2023-09-17', 'Cancelled order return',       0.00, 'New',      'Maria Chen'),
-    (92, 14, '2023-09-24', 'Wrong product delivered',    299.99, 'Good',     'James Holloway'),
-    (97, 22, '2023-10-29', 'Broken latch',                89.99, 'Damaged',  'Lisa Nguyen'),
-    (98, 22, '2023-11-05', 'Does not charge',             89.99, 'Damaged',  'Carlos Mendez'),
-    (99, 9,  '2023-11-12', 'Keyboard defect',            129.99, 'Damaged',  'Robert King'),
-    (100,10, '2023-11-22', 'Missing pieces',              79.99, 'Damaged',  'Sarah Mitchell'),
-    (86, 9,  '2023-08-15', 'Stopped working',            129.99, 'Damaged',  'David Okafor'),
-    (87, 13, '2023-08-22', 'Compatibility issue',        109.99, 'Like New', 'Maria Chen'),
-    (90, 15, '2023-09-10', 'Sound distortion',           199.99, 'Damaged',  'James Holloway'),
-    (94, 13, '2023-10-08', 'Missing accessories',        109.99, 'Good',     'Lisa Nguyen'),
-    (96, 13, '2023-10-23', 'Screen flickering',          109.99, 'Damaged',  'Carlos Mendez'),
-    (98, 14, '2023-11-06', 'Hinge broken',               299.99, 'Damaged',  'Robert King'),
-    (83, 10, '2023-07-25', 'Connectivity issues',         79.99, 'Good',     'Sarah Mitchell'),
-    (81, 17, '2023-07-12', 'Color not as shown',          59.99, 'Like New', 'David Okafor'),
-    (79, 9,  '2023-07-28', 'Keys sticking',              129.99, 'Damaged',  'Maria Chen'),
-    (78, 9,  '2023-07-21', 'Wrong layout',               129.99, 'Good',     'James Holloway'),
-    (77, 4,  '2023-06-12', 'Cancelled - never shipped',    0.00, 'New',      'Lisa Nguyen'),
-    (71, 10, '2023-06-05', 'Crackling sound',             79.99, 'Damaged',  'Carlos Mendez'),
-    (68, 17, '2023-05-15', 'Too tight',                   59.99, 'Like New', 'Robert King'),
-    (66, 6,  '2023-05-12', 'Port malfunction',            49.99, 'Damaged',  'Sarah Mitchell'),
-    (62, 9,  '2023-05-08', 'Duplicate order',            129.99, 'New',      'David Okafor'),
-    (57, 17, '2023-04-11', 'Fading after wash',           59.99, 'Used',     'Maria Chen'),
-    (55, 22, '2023-04-09', 'Elastic snapped',             89.99, 'Damaged',  'James Holloway'),
-    (54, 10, '2023-04-08', 'Low volume',                  79.99, 'Good',     'Lisa Nguyen'),
-    (52, 7,  '2023-04-06', 'Dead pixel',                 399.99, 'Damaged',  'Carlos Mendez'),
-    (49, 14, '2023-03-19', 'Strap broke',                299.99, 'Damaged',  'Robert King'),
-    (42, 15, '2023-03-12', 'Distorted bass',             199.99, 'Like New', 'Sarah Mitchell');
+DO $$
+DECLARE
+    c_count INT;
+    p_count INT;
+    o_count INT;
+    i_count INT;
+BEGIN
+    SELECT COUNT(*) INTO c_count FROM customers;
+    SELECT COUNT(*) INTO p_count FROM products;
+    SELECT COUNT(*) INTO o_count FROM orders;
+    SELECT COUNT(*) INTO i_count FROM order_items;
 
-
--- SECTION 9: REVIEWS (150 rows)
--- Issues: ratings out of 1–5 range, duplicate reviews,
---         null/empty review text, verified field variations,
---         orphaned customer/product IDs, mixed date formats
-
-
-INSERT INTO reviews
-    (customer_id, product_id, rating, review_date, review_text, verified)
-VALUES
-    -- Clean baseline
-    (1,  4,  5.0, '2023-01-20', 'Great mouse, very responsive and comfortable.',           'Yes'),
-    (1,  9,  4.0, '2023-02-15', 'Solid keyboard, good tactile feedback.',                  'Yes'),
-    (2,  20, 3.0, '2023-01-25', 'Average quality, nothing special.',                       'Yes'),
-    (3,  14, 5.0, '2023-01-30', 'Best smartwatch I have ever owned!',                      'Yes'),
-    (4,  22, 4.0, '2023-01-28', 'Good athletic shorts, comfortable material.',             'Yes'),
-    (5,  6,  5.0, '2023-01-20', 'USB hub works great with all my devices.',                'Yes'),
-    -- Out-of-range ratings
-    (6,  10, 6.0, '2023-01-30', 'Amazing speaker! 6 stars if I could!',                   'Yes'),
-    (7,  20, 0.0, '2023-02-05', 'Trash product, absolute zero.',                           'Yes'),
-    (8,   4,-1.0, '2023-02-10', 'Broken on arrival.',                                      'Yes'),
-    (9,   7,10.0, '2023-02-15', 'Ten out of ten would buy again.',                         'Yes'),
-    (10, 14, 4.5, '2023-02-20', 'Very impressed with battery life.',                       'Yes'),
-    -- Verified field inconsistencies
-    (11,  4, 3.0, '2023-03-01', 'Decent but a bit pricey.',                                'No'),
-    (12,  9, 5.0, '2023-03-05', 'Love this keyboard!',                                     'YES'),
-    (13, 14, 4.0, '2023-03-10', 'Good smartwatch for the price.',                          'yes'),
-    (14, 22, 2.0, '2023-03-15', 'Sizing runs small.',                                      'N'),
-    (15,  6, 5.0, '2023-03-20', 'Perfect hub, all ports work.',                            '1'),
-    (16, 10, 4.0, '2023-03-25', 'Good sound for the price.',                               'TRUE'),
-    (17, 15, 5.0, '2023-03-30', 'Incredible headphones, best ever!',                       'true'),
-    (18,  7, 3.0, '2023-04-04', 'It is ok, expected better resolution.',                  'False'),
-    (19, 14, 5.0, '2023-04-09', 'Life changing product!',                                  'no'),
-    -- Date format inconsistencies
-    (20,  9, 4.0, '04/15/2023',      'Types well, durable construction.',                  'Yes'),
-    (21, 22, 3.5, '04-20-2023',      'Decent shorts for the price.',                       'Yes'),
-    (22, 15, 5.0, 'April 25, 2023',  'The best headphones on the market.',                 'Yes'),
-    (23, 10, 4.0, '2023/04/30',      'Good portable speaker.',                             'Yes'),
-    -- Duplicate reviews
-    (1,  4,  5.0, '2023-01-20', 'Great mouse, very responsive and comfortable.',           'Yes'),
-    (1,  4,  5.0, '2023-01-20', 'Great mouse, very responsive and comfortable.',           'Yes'),
-    (3,  14, 5.0, '2023-01-30', 'Best smartwatch I have ever owned!',                      'Yes'),
-    -- NULL / empty review text
-    (24,  6, 4.0, '2023-05-05', NULL,                                                       'Yes'),
-    (25,  9, 5.0, '2023-05-10', '',                                                         'Yes'),
-    (26, 14, 3.0, '2023-05-15', '   ',                                                      'Yes'),
-    -- NULL foreign keys
-    (NULL, 4, 4.0, '2023-05-20', 'Good product.',                                           'Yes'),
-    (27, NULL,5.0, '2023-05-25', 'Excellent!',                                              'Yes'),
-    (28,  10,NULL, '2023-05-30', 'Sounds great.',                                           'Yes'),
-    -- Bulk valid reviews
-    (29, 15, 5.0, '2023-06-01', 'Noise cancellation is superb.',                           'Yes'),
-    (30,  7, 4.0, '2023-06-05', 'Great monitor, crisp display.',                           'Yes'),
-    (31, 17, 3.0, '2023-06-10', 'Jeans fit well but fade quickly.',                        'Yes'),
-    (32, 22, 4.0, '2023-06-15', 'Good shorts for running.',                                'Yes'),
-    (33, 13, 5.0, '2023-06-20', 'Fast and reliable SSD.',                                  'Yes'),
-    (34,  9, 4.0, '2023-06-25', 'Keys have good travel distance.',                         'Yes'),
-    (35, 26, 5.0, '2023-06-30', 'Stand mixer is powerful and quiet.',                      'Yes'),
-    (36, 14, 3.0, '2023-07-05', 'Battery could be better.',                                'Yes'),
-    (37,  6, 5.0, '2023-07-10', 'Essential accessory for any workspace.',                  'Yes'),
-    (38, 10, 4.0, '2023-07-15', 'Good portable speaker.',                                  'Yes'),
-    (39,  7, 5.0, '2023-07-20', 'Colors are vibrant and accurate.',                        'Yes'),
-    (40, 36, 4.0, '2023-07-25', 'Smart thermostat easy to program.',                       'Yes'),
-    (41,  4, 3.0, '2023-07-30', 'Scroll wheel is a bit stiff.',                            'Yes'),
-    (42, 22, 5.0, '2023-08-04', 'Very comfortable, great material.',                       'Yes'),
-    (43, 15, 4.0, '2023-08-09', 'Great noise cancellation, good battery.',                 'Yes'),
-    (44,  9, 5.0, '2023-08-14', 'Best mechanical keyboard I have used.',                   'Yes'),
-    (45, 13, 4.0, '2023-08-19', 'Fast read/write speeds.',                                 'Yes'),
-    (46, 17, 2.0, '2023-08-24', 'Seams started to unravel after 3 washes.',               'Yes'),
-    (47,  7, 5.0, '2023-08-29', 'Stunning 4K quality, highly recommend.',                  'Yes'),
-    (48, 14, 4.0, '2023-09-03', 'Stylish design and reliable GPS.',                        'Yes'),
-    (49, 26, 5.0, '2023-09-08', 'Makes bread dough like a pro.',                           'Yes'),
-    (50,  4, 4.0, '2023-09-13', 'Comfortable grip, good DPI options.',                     'Yes'),
-    (51, 15, 3.0, '2023-09-18', 'Sound leaks a bit at high volume.',                       'Yes'),
-    (52,  6, 5.0, '2023-09-23', 'Works flawlessly, all 7 ports active.',                   'Yes'),
-    (53,  9, 4.0, '2023-09-28', 'Satisfying clicks.',                                      'Yes'),
-    (54, 22, 3.0, '2023-10-03', 'A bit thin for colder weather.',                          'Yes'),
-    (55, 36, 5.0, '2023-10-08', 'Cut my energy bill by 15 percent.',                       'Yes'),
-    (56,  7, 4.0, '2023-10-13', 'Slight backlight bleed in corners.',                      'Yes'),
-    (57, 13, 5.0, '2023-10-18', 'Blazing fast, very satisfied.',                           'Yes'),
-    (58, 17, 4.0, '2023-10-23', 'Good fit, durable stitching.',                            'Yes'),
-    (59, 15, 5.0, '2023-10-28', 'Changed how I listen to music.',                          'Yes'),
-    (60, 14, 2.0, '2023-11-02', 'Screen cracked after 2 months.',                          'Yes'),
-    (61,  4, 4.0, '2023-11-07', 'Does the job, no complaints.',                            'Yes'),
-    (62,  9, 5.0, '2023-11-12', 'Cherry MX switches are amazing.',                         'Yes'),
-    (63,  7, 3.0, '2023-11-17', 'Stand feels flimsy.',                                     'Yes'),
-    (64, 22, 4.0, '2023-11-22', 'Perfect gym shorts.',                                     'Yes'),
-    (65, 13, 5.0, '2023-11-27', 'Would not go back to HDD.',                               'Yes'),
-    (66, 10, 4.0, '2023-12-02', 'Pairs easily, good battery life.',                        'Yes'),
-    (67,  6, 5.0, '2023-12-07', 'Solved all my port issues.',                              'Yes'),
-    (68, 15, 4.0, '2023-12-12', 'Comfortable for 6 hour flights.',                         'Yes'),
-    (69, 14, 5.0, '2023-12-17', 'Activity tracking is very accurate.',                     'Yes'),
-    (70, 36, 4.0, '2023-12-22', 'Easy install, works with Alexa.',                         'Yes'),
-    (71,  9, 3.0, '2023-12-27', 'A bit loud for a quiet office.',                          'Yes'),
-    -- 2024 reviews
-    (72,  7, 5.0, '2024-01-05', 'Crystal clear picture.',                                  'Yes'),
-    (73, 26, 4.0, '2024-01-10', 'Powerful motor, easy to clean.',                          'Yes'),
-    (74, 17, 3.0, '2024-01-15', 'Shrunk slightly after first wash.',                       'Yes'),
-    (75,  4, 5.0, '2024-01-20', 'Accurate tracking, smooth scroll.',                       'Yes'),
-    (76, 13, 4.0, '2024-01-25', 'Compact and fast.',                                       'Yes'),
-    (77, 15, 5.0, '2024-01-30', 'Absolute best headphones on the market.',                 'Yes'),
-    (78, 22, 4.0, '2024-02-04', 'Very comfortable, machine washable.',                     'Yes'),
-    (79,  6, 3.0, '2024-02-09', 'One port stopped working after a month.',                 'Yes'),
-    (80, 36, 5.0, '2024-02-14', 'Set it and forget it.',                                   'Yes'),
-    -- Spam / invalid reviews
-    (1,   4, 5.0, '2024-02-19', 'AMAZING PRODUCT BUY NOW CLICK HERE',                     'No'),
-    (2,   7, 1.0, '2024-02-24', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',                    'No'),
-    (3,   9, 3.0, '2024-03-01', '...',                                                      'No'),
-    -- Orphaned reviews
-    (9999,4, 4.0, '2024-03-06', 'Good product.',                                            'Yes'),
-    (1, 9999,5.0, '2024-03-11', 'Love this!',                                               'Yes'),
-    -- More 2024 reviews
-    (81, 10, 4.0, '2024-03-16', 'Good for its price point.',                               'Yes'),
-    (82, 14, 5.0, '2024-03-21', 'Feature packed, worth every penny.',                      'Yes'),
-    (83,  9, 4.0, '2024-03-26', 'Typing experience is great.',                             'Yes'),
-    (84, 22, 3.0, '2024-03-31', 'Average durability.',                                     'Yes'),
-    (85,  7, 5.0, '2024-04-05', 'Monitor is excellent for photo editing.',                 'Yes'),
-    (86, 15, 4.0, '2024-04-10', 'Great for travel.',                                       'Yes'),
-    (87, 26, 5.0, '2024-04-15', 'Worth every cent.',                                       'Yes'),
-    (88,  4, 3.0, '2024-04-20', 'Double click issue started after 6 months.',              'Yes'),
-    (89, 36, 5.0, '2024-04-25', 'Saved money on electricity.',                             'Yes'),
-    (90, 13, 4.0, '2024-04-30', 'Reliable and durable.',                                   'Yes'),
-    (91, 17, 2.0, '2024-05-05', 'Not true to size at all.',                                'Yes'),
-    (92,  6, 5.0, '2024-05-10', 'All ports work perfectly.',                               'Yes'),
-    (93, 14, 4.0, '2024-05-15', 'Comfortable to wear all day.',                            'Yes'),
-    (94,  9, 5.0, '2024-05-20', 'Clicky and satisfying to type on.',                       'Yes'),
-    (95, 22, 4.0, '2024-05-25', 'Good quality for the price.',                             'Yes'),
-    (96, 10, 3.0, '2024-05-30', 'Battery drains faster than expected.',                    'Yes'),
-    (97,  7, 5.0, '2024-06-04', 'Huge upgrade from my old monitor.',                       'Yes'),
-    (98, 15, 4.0, '2024-06-09', 'Comfortable and great ANC.',                              'Yes'),
-    (99, 26, 3.0, '2024-06-14', 'Tends to overheat on long use.',                          'Yes'),
-    (100, 4, 4.0, '2024-06-19', 'Solid mouse for everyday use.',                           'Yes'),
-    (101, 9, 4.0, '2024-06-24', 'Keys feel premium.',                                      'Yes'),
-    (102, 7, 5.0, '2024-06-29', 'Incredible display quality.',                             'Yes'),
-    (103,14, 3.0, '2024-07-04', 'Battery not lasting as advertised.',                      'Yes'),
-    (104,22, 4.0, '2024-07-09', 'Comfortable and lightweight.',                            'Yes'),
-    (105,15, 5.0, '2024-07-14', 'Best purchase I have made this year.',                    'Yes'),
-    (106,36, 4.0, '2024-07-19', 'Integrates well with smart home.',                        'Yes'),
-    (107, 4, 3.0, '2024-07-24', 'Scroll clicks are inconsistent.',                         'Yes'),
-    (108,13, 5.0, '2024-07-29', 'Lightning fast transfer speeds.',                         'Yes'),
-    (109, 9, 4.0, '2024-08-03', 'Great build quality.',                                    'Yes'),
-    (110,17, 2.0, '2024-08-08', 'Material feels cheap.',                                   'Yes'),
-    (111, 6, 5.0, '2024-08-13', 'Every port works, no issues.',                            'Yes'),
-    (112,14, 4.0, '2024-08-18', 'Sleep tracking is very accurate.',                        'Yes'),
-    (113,22, 3.0, '2024-08-23', 'Stitching came loose after a month.',                     'Yes'),
-    (114,15, 5.0, '2024-08-28', 'Worth every single penny.',                               'Yes'),
-    (115,10, 4.0, '2024-09-02', 'Crisp sound and easy pairing.',                           'Yes'),
-    (116, 7, 5.0, '2024-09-07', 'Colors are stunning and accurate.',                       'Yes'),
-    (117,26, 3.0, '2024-09-12', 'Bowl attachment cracks under stress.',                    'Yes'),
-    (118, 4, 4.0, '2024-09-17', 'Ergonomic design, fits my hand well.',                    'Yes'),
-    (119,36, 5.0, '2024-09-22', 'Reduced heating bills noticeably.',                       'Yes'),
-    (120,13, 4.0, '2024-09-27', 'Survived a drop, still works fine.',                      'Yes');
+    
+    RAISE NOTICE 'DATABASE POPULATION COMPLETE';
+    
+    RAISE NOTICE 'Customers:   % rows', c_count;
+    RAISE NOTICE 'Products:    % rows', p_count;
+    RAISE NOTICE 'Orders:      % rows', o_count;
+    RAISE NOTICE 'Order Items: % rows', i_count;
+    RAISE NOTICE 'TOTAL:       % rows', c_count + p_count + o_count + i_count;
+    
+END $$;
