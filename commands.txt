@@ -1,0 +1,9 @@
+PostgreSQL Commands
+
+psql -U postgres
+
+
+SELECT rolname FROM pg_roles;
+
+SELECT rolname, rolsuper, rolcreaterole, rolcreatedb, rolcanlogin
+FROM pg_roles;
