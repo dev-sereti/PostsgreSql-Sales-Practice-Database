@@ -1,8 +1,6 @@
 Error:
 fatal: dev cannot be resolved to branch
 
-
-
 If you’re not sure what branches you actually have, run:
 git branch
 
