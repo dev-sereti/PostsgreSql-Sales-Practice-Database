@@ -77,44 +77,155 @@ CREATE TABLE order_items (
 
 
 INSERT INTO customers
-    (first_name, last_name, email, phone, address, city, state, zip_code, country, registration_date, customer_segment)
+    (first_name, last_name, email, phone, address,
+     city, state, zip_code, country,
+     registration_date, customer_segment)
 VALUES
 -- Normal records
-('John',     'Smith',      'john.smith@email.com',        '(555) 123-4567',  '123 Main St',           'New York',      'NY',    '10001',   'USA',    '2022-01-15',  'Premium'),
-('Jane',     'Doe',        'jane.doe@email.com',          '555-234-5678',    '456 Oak Ave',            'Los Angeles',   'CA',    '90001',   'USA',    '2022-02-20',  'Regular'),
-('Robert',   'Johnson',    'robert.j@email.com',          '(555)345-6789',   '789 Pine Rd',            'Chicago',       'IL',    '60601',   'USA',    '2022-03-10',  'Premium'),
-('Emily',    'Williams',   'emily.w@email.com',           '555.456.7890',    '321 Elm St',             'Houston',       'TX',    '77001',   'USA',    '2022-04-05',  'Regular'),
-('Michael',  'Brown',      'michael.b@email.com',         '5559876543',      '654 Birch Ln',           'Phoenix',       'AZ',    '85001',   'USA',    '2022-05-18',  'VIP'),
+('John',      'Smith',      'john.smith@email.com',
+ '(555) 123-4567', '123 Main St',
+ 'New York',  'NY',    '10001', 'USA',
+ '2022-01-15','Premium'),
 
--- Duplicate of John Smith (exact)
-('John',     'Smith',      'john.smith@email.com',        '(555) 123-4567',  '123 Main St',           'New York',      'NY',    '10001',   'USA',    '2022-01-15',  'Premium'),
+('Jane',      'Doe',        'jane.doe@email.com',
+ '555-234-5678',   '456 Oak Ave',
+ 'Los Angeles','CA', '90001', 'USA',
+ '2022-02-20','Regular'),
 
--- Near-duplicate of John Smith (slight differences)
-('john',     'smith',      'john.smith@email.com',        '555-123-4567',    '123 Main Street',       'new york',      'ny',    '10001',   'US',     '01/15/2022',  'premium'),
-(' John ',   'Smith ',     'JOHN.SMITH@EMAIL.COM',        '(555)123-4567',   '123 Main St.',          'NEW YORK',      'New York', '10001','United States', '2022-01-15', 'PREMIUM'),
+('Robert',    'Johnson',    'robert.j@email.com',
+ '(555)345-6789',  '789 Pine Rd',
+ 'Chicago',   'IL',   '60601', 'USA',
+ '2022-03-10','Premium'),
 
--- Missing data in various forms
-('Sarah',    'Davis',      NULL,                          '555-111-2222',    '100 Center Blvd',        'Miami',         'FL',    '33101',   'USA',    '2022-06-01',  'Regular'),
-('David',    '',           'david@email.com',             '',                '200 West Rd',            'Seattle',       'WA',    '98101',   'USA',    '2022-07-12',  NULL),
-('Lisa',     'Anderson',   'N/A',                         'n/a',             '',                       'Boston',        'MA',    '',        'USA',    'None',        'Regular'),
-('',         'Taylor',     'taylor@email.com',            '--',              'N/A',                    NULL,            'OR',    '97201',   NULL,     '2022-08-22',  'n/a'),
-('Kevin',    NULL,         'kevin@email.com',             '555-333-4444',    '400 North Ave',          'Denver',        'CO',    '80201',   'USA',    '',            '--'),
+('Emily',     'Williams',   'emily.w@email.com',
+ '555.456.7890',   '321 Elm St',
+ 'Houston',   'TX',   '77001', 'USA',
+ '2022-04-05','Regular'),
 
--- Invalid data
-('Amy',      'Wilson',     'amy-at-email.com',            '12345',           '500 South St',           'Atlanta',       'GA',    '30301',   'USA',    '2022-09-15',  'Regular'),
-('Chris',    'Martinez',   'chris@',                      'not a phone',     '600 East Blvd',          'Dallas',        'TX',    'ABCDE',   'USA',    '2099-12-31',  'Gold'),
-('Nancy',    'Thomas',     'nancy@email..com',            '555-000-0000',    '700 Lake Dr',            'San Fran',      'CA',    '94101',   'USA',    '13/25/2022',  'Premum'),
+('Michael',   'Brown',      'michael.b@email.com',
+ '5559876543',     '654 Birch Ln',
+ 'Phoenix',   'AZ',   '85001', 'USA',
+ '2022-05-18','VIP'),
 
--- Inconsistent city/state naming
-('Mark',     'Jackson',    'mark.j@email.com',            '(555) 444-5555',  '800 River Rd',           'NYC',           'New York','10002', 'US',     '2022-10-05',  'Regular'),
-('Laura',    'White',      'laura.w@email.com',           '555-555-6666',    '900 Hill St',            'L.A.',          'California','90002','United States','2022-10-15','regular'),
-('James',    'Harris',     'james.h@email.com',           '(555)666-7777',   '1000 Valley Ave',        'S.F.',          'Calif.','94102',   'U.S.A.', '2022-11-01',  'REGULAR'),
-('Patricia', 'Clark',      'patricia.c@email.com',        '555 777 8888',    '1100 Mountain Rd',       'Houstan',       'Tx',    '77002',   'usa',    '2022-11-20',  'Prremium'),
+-- Exact duplicate of John Smith
+('John',      'Smith',      'john.smith@email.com',
+ '(555) 123-4567', '123 Main St',
+ 'New York',  'NY',   '10001', 'USA',
+ '2022-01-15','Premium'),
 
--- Typos and misspellings
-('Daniel',   'Lewsi',      'daniel.l@email.com',          '(555)888-9999',   '1200 Forest Ln',         'Chciago',       'ILL',   '60602',   'USA',    '2022-12-01',  'Regulr'),
-('Jennifer', 'Robinsn',    'jennifer.r@email.com',        '555-999-0000',    '1300 Desert Dr',         'Phoneix',       'Ariz',  '85002',   'USA',    '2022-12-15',  'VPI');
+-- Near-duplicate: lowercase, different phone format
+('john',      'smith',      'john.smith@email.com',
+ '555-123-4567',   '123 Main Street',
+ 'new york',  'ny',   '10001', 'US',
+ '01/15/2022','premium'),
 
+-- Near-duplicate: extra spaces, uppercase email
+(' John ',    'Smith ',     'JOHN.SMITH@EMAIL.COM',
+ '(555)123-4567',  '123 Main St.',
+ 'NEW YORK',  'New York', '10001', 'United States',
+ '2022-01-15','PREMIUM'),
+
+-- Missing data: NULL email
+('Sarah',     'Davis',      NULL,
+ '555-111-2222',   '100 Center Blvd',
+ 'Miami',     'FL',   '33101', 'USA',
+ '2022-06-01','Regular'),
+
+-- Missing data: empty last name and phone
+('David',     '',           'david@email.com',
+ '',               '200 West Rd',
+ 'Seattle',   'WA',   '98101', 'USA',
+ '2022-07-12', NULL),
+
+-- Missing data: N/A, n/a, empty strings, None
+('Lisa',      'Anderson',   'N/A',
+ 'n/a',            '',
+ 'Boston',    'MA',   '',      'USA',
+ 'None',      'Regular'),
+
+-- Missing data: empty first name, NULL city
+('',          'Taylor',     'taylor@email.com',
+ '--',             'N/A',
+ NULL,        'OR',   '97201', NULL,
+ '2022-08-22','n/a'),
+
+-- Missing data: NULL last name, empty date, -- segment
+('Kevin',     NULL,         'kevin@email.com',
+ '555-333-4444',   '400 North Ave',
+ 'Denver',    'CO',   '80201', 'USA',
+ '',          '--'),
+
+-- Invalid email format (missing @)
+('Amy',       'Wilson',     'amy-at-email.com',
+ '12345',          '500 South St',
+ 'Atlanta',   'GA',   '30301', 'USA',
+ '2022-09-15','Regular'),
+
+-- Invalid email (incomplete), non-numeric phone, bad zip
+('Chris',     'Martinez',   'chris@',
+ 'not a phone',    '600 East Blvd',
+ 'Dallas',    'TX',   'ABCDE', 'USA',
+ '2099-12-31','Gold'),
+
+-- Invalid email (double dot), impossible date, typo segment
+('Nancy',     'Thomas',     'nancy@email..com',
+ '555-000-0000',   '700 Lake Dr',
+ 'San Fran',  'CA',   '94101', 'USA',
+ '13/25/2022','Premum'),
+
+-- Inconsistent city: NYC instead of New York
+('Mark',      'Jackson',    'mark.j@email.com',
+ '(555) 444-5555', '800 River Rd',
+ 'NYC',       'New York', '10002', 'US',
+ '2022-10-05','Regular'),
+
+-- Inconsistent city: L.A., full state name
+('Laura',     'White',      'laura.w@email.com',
+ '555-555-6666',   '900 Hill St',
+ 'L.A.',      'California', '90002', 'United States',
+ '2022-10-15','regular'),
+
+-- Inconsistent city: S.F., abbreviated state
+('James',     'Harris',     'james.h@email.com',
+ '(555)666-7777',  '1000 Valley Ave',
+ 'S.F.',      'Calif.', '94102', 'U.S.A.',
+ '2022-11-01','REGULAR'),
+
+-- Typo city: Houstan, lowercase country
+('Patricia',  'Clark',      'patricia.c@email.com',
+ '555 777 8888',   '1100 Mountain Rd',
+ 'Houstan',   'Tx',   '77002', 'usa',
+ '2022-11-20','Prremium'),
+
+-- Typo last name + city: Lewsi, Chciago
+('Daniel',    'Lewsi',      'daniel.l@email.com',
+ '(555)888-9999',  '1200 Forest Ln',
+ 'Chciago',   'ILL',  '60602', 'USA',
+ '2022-12-01','Regulr'),
+
+-- Typo last name + city: Robinsn, Phoneix, VPI segment
+('Jennifer',  'Robinsn',    'jennifer.r@email.com',
+ '555-999-0000',   '1300 Desert Dr',
+ 'Phoneix',   'Ariz', '85002', 'USA',
+ '2022-12-15','VPI'),
+
+-- Extra whitespace everywhere
+('  Brian',   'Young  ',    ' brian.y@email.com ',
+ ' 555-111-0000 ', '  1400 Beach Blvd  ',
+ '  Miami  ', ' FL ', ' 33102 ', ' USA ',
+ ' 2023-01-10 ', '  Regular  '),
+
+-- Unicode / special characters
+('José',      'García',     'jose.garcia@email.com',
+ '555-222-3333',   '1500 Calle Principal',
+ 'San Antonio','TX', '78201', 'USA',
+ '2023-01-20','Premium'),
+
+-- More unicode
+('Müller',    'François',   'muller.f@email.com',
+ '555-333-4444',   '1600 Hauptstraße',
+ 'Portland',  'OR',   '97202', 'USA',
+ '2023-02-01','Regular');
 -- Extra whitespace issues
 --('  Brian',  'Young  ',    ' brian.y@email.com ',         ' 555-111-0000 ',  '  1400 Beach Blvd  ',    '  Miami  ',     ' FL ',  ' 33102 ', ' USA ',  ' 2023-01-10 ','  Regular  ');
 
