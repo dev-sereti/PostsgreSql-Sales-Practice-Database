@@ -8,7 +8,6 @@
 -- CREATE DATABASE "Sales";
 -- \c Sales
 
-
 -- STEP 1: DROP EXISTING TABLES (for re-runnability)
 
 DROP TABLE IF EXISTS order_items CASCADE;
@@ -33,7 +32,7 @@ CREATE TABLE customers (
     state           VARCHAR(100),
     zip_code        VARCHAR(20),
     country         VARCHAR(100),
-    registration_date TEXT,          -- intentionally TEXT to allow bad dates
+    registration_date TEXT,          
     customer_segment  VARCHAR(50)
 );
 
@@ -114,14 +113,10 @@ VALUES
 
 -- Typos and misspellings
 ('Daniel',   'Lewsi',      'daniel.l@email.com',          '(555)888-9999',   '1200 Forest Ln',         'Chciago',       'ILL',   '60602',   'USA',    '2022-12-01',  'Regulr'),
-('Jennifer', 'Robinsn',    'jennifer.r@email.com',        '555-999-0000',    '1300 Desert Dr',         'Phoneix',       'Ariz',  '85002',   'USA',    '2022-12-15',  'VPI'),
+('Jennifer', 'Robinsn',    'jennifer.r@email.com',        '555-999-0000',    '1300 Desert Dr',         'Phoneix',       'Ariz',  '85002',   'USA',    '2022-12-15',  'VPI');
 
 -- Extra whitespace issues
-('  Brian',  'Young  ',    ' brian.y@email.com ',         ' 555-111-0000 ',  '  1400 Beach Blvd  ',    '  Miami  ',     ' FL ',  ' 33102 ', ' USA ',  ' 2023-01-10 ','  Regular  '),
-
--- Unicode / special character issues
-('José',     'García',     'jose.garcia@email.com',       '555-222-3333',    '1500 Calle Principal',   'San Antonio',   'TX',    '78201',   'USA',    '2023-01-20',  'Premium'),
-('Müller',   'François',   'muller.f@email.com',          '555-333-4444',    '1600 Hauptstraße',       'Portland',      'OR',    '97202',   'USA',    '2023-02-01',  'Regular');
+--('  Brian',  'Young  ',    ' brian.y@email.com ',         ' 555-111-0000 ',  '  1400 Beach Blvd  ',    '  Miami  ',     ' FL ',  ' 33102 ', ' USA ',  ' 2023-01-10 ','  Regular  ');
 
 -- Generate more customers procedurally with random messiness
 INSERT INTO customers
