@@ -17,3 +17,7 @@ select * from customers where email is not null and position('@' in email ) =0;
 
 --List all distinct customer_segment values.
 select distinct customer_segment from customers order by customer_segment;
+
+--Use TRIM and INITCAP to clean casing and whitespace.
+select initcap(TRIM(first_name)) as firstname, 
+initcap(TRIM(last_name)) as lastname from customers;
